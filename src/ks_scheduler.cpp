@@ -3,9 +3,10 @@
 #include <set>
 #include <map>
 
-#include "utilities.h"
-#include "path_finder/sipp_solver.h"
+#include "ks_simulator.h"
 #include "ks_wms.h"
+#include "path_finder/sipp_solver.h"
+#include "utilities.h"
 
 namespace ks {
 
@@ -70,7 +71,7 @@ void KsScheduler::Run() {
 
     PfResponse resp = sipp_p_->FindPath({robot_info});
     mutex_.lock();
-    action_graph_.SetPlan(resp.actions);
+    action_graph_.SetPlan(resp.action_seq);
   }
 }
 

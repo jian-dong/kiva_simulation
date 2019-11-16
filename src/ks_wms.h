@@ -6,11 +6,12 @@
 #include <queue>
 
 #include "common_types.h"
-#include "ks_scheduler.h"
 #include "ks_map.h"
 #include "interface/wms_scheduler_types.h"
 
 namespace ks {
+
+class KsScheduler;
 
 // WMS specific types.
 // A place holder for shelf info.

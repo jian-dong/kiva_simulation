@@ -16,6 +16,7 @@ class KsMap {
   const std::vector<Location>& GetShelfOperationPoints() const;
   const std::vector<Location>& GetShelfStoragePoints() const;
   const std::vector<Location>& GetRestAreas() const;
+  bool IsLocationPassable(const Location& loc) const;
 
  private:
   char map_[kXLimit][kYLimit];

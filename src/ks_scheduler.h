@@ -10,13 +10,13 @@
 #include "ks_actiongraph.h"
 #include "ks_map.h"
 #include "path_finder/sipp_solver.h"
-#include "ks_simulator.h"
 #include "interface/wms_scheduler_types.h"
 #include "interface/scheduler_simulator_types.h"
 #include "ks_scheduler_common.h"
 
 namespace ks {
 class KsWms;
+class KsSimulator;
 
 class KsScheduler {
  public:

@@ -22,7 +22,7 @@ milliseconds GetActionDuration(Action a) {
     return milliseconds(kAttachDetachDurationMs);
   }
   if (a == Action::MOVE) {
-    return milliseconds(kForwardDurationMs) + milliseconds((int)pow(GenRandomNumber(0, 90), 2) );
+    return milliseconds(kMoveDurationMs) + milliseconds((int)pow(GenRandomNumber(0, 90), 2) );
   }
   if (a == Action::YIELD) {
     return milliseconds(kWaitDurationMs);

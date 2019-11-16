@@ -4,15 +4,14 @@
 #include "ks_map.h"
 #include "ks_scheduler.h"
 #include "ks_simulator.h"
-#include "ks_wms.cpp"
+#include "ks_wms.h"
 
 namespace ks {
 
 class KsRunner {
  public:
   KsRunner() = default;
-  void Init();
-  void Run();
+  void Start();
 
  private:
   KsMap* map_p_;

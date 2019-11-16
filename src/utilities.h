@@ -12,7 +12,7 @@ namespace ks {
 
 extern TimePoint (*GetCurrentTime)(void);
 
-int GetManhattanDist(Location a, Location b) {
+inline int GetManhattanDist(Location a, Location b) {
   return abs(a.x - b.x) + abs(a.y - b.y);
 }
 
@@ -37,7 +37,7 @@ inline int GenRandomNumber(int lb, int ub) {
   return lb + ((double)rand() / (double)RAND_MAX) * (ub - lb);
 }
 
-bool ElapsedTimeLongerThanMs(TimePoint s, uint64_t duration_ms) {
+inline bool ElapsedTimeLongerThanMs(TimePoint s, uint64_t duration_ms) {
   return GetCurrentTime() - s > std::chrono::milliseconds(duration_ms);
 }
 
@@ -49,9 +49,9 @@ class Random {
   // This is not a problem for now. But there should be a better random device.
 };
 
-const double EPS = 1e-10;
+const double EPS = 1e-6;
 // Compare two doubles with epsilon.
-int DoubleEquals(double a, double b) {
+inline int DoubleEquals(double a, double b) {
   return fabs(a - b) < EPS;
 }
 

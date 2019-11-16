@@ -15,12 +15,35 @@ struct Mission {
   WmsMission wms_mission;
   InternalMission internal_mission;
   Mission() = default;
+  Mission &operator=(const Mission &o) = default;
+};
+
+struct Position {
+  Location loc;
+  Direction dir;
+
+  Position() = default;
+  Position(Location loc, Direction dir) : loc(loc), dir(dir) {};
+
+  bool operator<(const Position &o) const {
+    if (loc != o.loc) {
+      return loc < o.loc;
+    }
+    return dir < o.dir;
+  }
+
+  bool operator==(const Position &o) const {
+    return loc == o.loc && dir == o.dir;
+  }
+
+  bool operator!=(const Position &o) const {
+    return !operator==(o);
+  }
 };
 
 struct RobotInfo {
   int id;
-  Direction dir;
-  Location loc;
+  Position pos;
   bool shelf_attached;
 
   // When has_mission is false, and report_mission_done is true, the robot has
@@ -28,8 +51,8 @@ struct RobotInfo {
   bool has_mission;
   Mission mission;
 
-  RobotInfo(int id, Location loc) : id(id), loc(loc){
-    dir = Direction::NORTH;
+  RobotInfo(int id, Location loc) : id(id) {
+    pos = {loc, Direction::NORTH};
     shelf_attached = false;
     has_mission = false;
   }
@@ -46,7 +69,7 @@ struct RobotInfo {
   }
 };
 
-inline void ApplyActionOnRobot(Action a, RobotInfo* r) {
+inline void ApplyActionOnRobot(Action a, RobotInfo *r) {
   switch (a) {
     case Action::ATTACH:assert(r->shelf_attached == false);
       r->shelf_attached = true;
@@ -58,20 +81,44 @@ inline void ApplyActionOnRobot(Action a, RobotInfo* r) {
     case Action::YIELD:
       // Yield is effectively a WAIT operation in the MAPF setting. Do nothing.
       break;
-    case Action::MOVE:r->loc = r->loc + kDirectionToDelta.at(r->dir);
+    case Action::MOVE:r->pos.loc = r->pos.loc + kDirectionToDelta.at(r->pos.dir);
       break;
-    case Action::CTURN:r->dir = ClockwiseTurn(r->dir);
+    case Action::CTURN:r->pos.dir = ClockwiseTurn(r->pos.dir);
       break;
-    case Action::CCTURN:r->dir = CounterClockwiseTurn(r->dir);
+    case Action::CCTURN:r->pos.dir = CounterClockwiseTurn(r->pos.dir);
       break;
     default:exit(0);
   }
 }
 
-struct ActionSeqWithTime {
-  // A sequence of actions, along with the start time of each action.
-  std::vector<std::pair<double, Action>> actions;
+inline Position ApplyActionOnPosition(Action a, Position p) {
+  Position rtn = p;
+  switch (a) {
+    case Action::ATTACH:break;
+    case Action::DETACH:break;
+    case Action::YIELD:break;
+    case Action::MOVE:rtn.loc = rtn.loc + kDirectionToDelta.at(rtn.dir);
+      break;
+    case Action::CTURN:rtn.dir = ClockwiseTurn(rtn.dir);
+      break;
+    case Action::CCTURN:rtn.dir = CounterClockwiseTurn(rtn.dir);
+      break;
+    default:exit(0);
+  }
+  return rtn;
+}
+
+struct ActionWithTime {
+  Action action;
+  double start_time;
+  double end_time;
+
+  ActionWithTime() = default;
+  ActionWithTime(Action action, double start_time, double end_time)
+      : action(action), start_time(start_time), end_time(end_time) {};
 };
+
+using ActionWithTimeSeq = std::vector<ActionWithTime>;
 
 }
 #endif

@@ -82,9 +82,9 @@ struct RobotStatus {
   RobotStatus() = default;
   RobotStatus(const RobotInfo& r) {
     id = r.id;
-    dir = r.dir;
-    loc.x = r.loc.x;
-    loc.y = r.loc.y;
+    dir = r.pos.dir;
+    loc.x = r.pos.loc.x;
+    loc.y = r.pos.loc.y;
     shelf_attached = false;
   }
 

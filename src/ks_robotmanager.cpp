@@ -14,7 +14,7 @@ void KsRobotManager::Init(KsWms *wms_p) {
   wms_p_ = wms_p;
   const vector<Location> &shelf_storage_points = map_.GetShelfStoragePoints();
   for (int i = 0; i < kRobotCount; i++) {
-    robot_info_.push_back({i, shelf_storage_points[i]});
+    robot_info_.emplace_back(i, shelf_storage_points[i]);
   }
 
   rest_area_assignment_.resize(rest_areas_.size());
@@ -59,9 +59,9 @@ void KsRobotManager::AssignMissions(std::set<WmsMission> &missions) {
 
     // TODO: This program assumes WMS won't schedule other robots to move to
     // the "from" location or the "to" location. Maybe have a check to verify this?
-    RobotInfo *picked_robot = GetIdleRobotAtLocation(m.from.loc);
+    RobotInfo *picked_robot = GetIdleRobotAtLocation(m.pick_from.loc);
     if (picked_robot == nullptr) {
-      picked_robot = GetClosestIdleRobot(m.from.loc);
+      picked_robot = GetClosestIdleRobot(m.pick_from.loc);
     }
     assert(picked_robot != nullptr);
     FreeFromRestArea(picked_robot->id);
@@ -69,7 +69,7 @@ void KsRobotManager::AssignMissions(std::set<WmsMission> &missions) {
     picked_robot->mission.is_internal = false;
     picked_robot->mission.wms_mission = m;
 
-    RobotInfo *blocking_robot = GetIdleRobotAtLocation(m.to.loc);
+    RobotInfo *blocking_robot = GetIdleRobotAtLocation(m.drop_to.loc);
     if (blocking_robot != nullptr) {
       blocking_robot->has_mission = true;
       blocking_robot->mission.is_internal = true;
@@ -81,7 +81,7 @@ void KsRobotManager::AssignMissions(std::set<WmsMission> &missions) {
 RobotInfo *KsRobotManager::GetIdleRobotAtLocation(Location loc) {
   vector<RobotInfo *> idle_robots = GetIdleRobots();
   for (RobotInfo *p : idle_robots) {
-    if (p->loc == loc) {
+    if (p->pos.loc == loc) {
       return p;
     }
   }
@@ -95,9 +95,9 @@ RobotInfo *KsRobotManager::GetClosestIdleRobot(Location loc) {
   }
 
   RobotInfo *picked_robot = idle_robots[0];
-  int dist = GetManhattanDist(picked_robot->loc, loc);
+  int dist = GetManhattanDist(picked_robot->pos.loc, loc);
   for (int i = 1; i < idle_robots.size(); i++) {
-    int new_dist = GetManhattanDist(idle_robots[i]->loc, loc);
+    int new_dist = GetManhattanDist(idle_robots[i]->pos.loc, loc);
     if (dist > new_dist) {
       dist = new_dist;
       picked_robot = idle_robots[i];

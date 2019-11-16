@@ -26,6 +26,7 @@ add_library(
     utilities.cpp
 
     path_finder/sipp_solver.cpp
+    path_finder/sipp_astar.cpp
 )
 
 add_executable(
@@ -38,4 +39,24 @@ target_link_libraries(
     local_test_main
 
     ks
+    pthread
+    hiredis
+)
+
+# Tests.
+add_executable(
+    sipp_test
+
+    path_finder/sipp_astar.cpp
+    path_finder/sipp_solver.cpp
+    path_finder/sipp_solver_test.cpp
+)
+
+target_link_libraries(
+    sipp_test
+
+    ks
+    gmock
+    gtest
+    pthread
 )

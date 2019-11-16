@@ -4,6 +4,8 @@
 #include <iostream>
 #include <vector>
 
+#include "logger.h"
+
 namespace ks {
 using namespace std;
 
@@ -53,12 +55,20 @@ const std::vector<Location> &KsMap::GetShelfStoragePoints() const {
   return ssps_;
 }
 
-const std::vector<Location>& KsMap::GetPassableLocations() const {
+const std::vector<Location> &KsMap::GetPassableLocations() const {
   return passable_;
 }
 
 const std::vector<Location> &KsMap::GetRestAreas() const {
   return rest_area_;
+}
+
+bool KsMap::IsLocationPassable(const Location &loc) const {
+  int x = loc.x, y = loc.y;
+  if (x < 0 || x >= kXLimit || y < 0 || y >= kYLimit) {
+    return false;
+  }
+  return map_[x][y] != 'B' && map_[x][y] != 'O' && map_[x][y] != 'T';
 }
 
 }

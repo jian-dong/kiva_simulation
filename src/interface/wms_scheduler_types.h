@@ -32,7 +32,7 @@ struct WmsMission {
   int id;
   // A mission always contains two parts, pickup a shelf from the @from location,
   // then put it down at the @to location.
-  LocationInfo from, to;
+  LocationInfo pick_from, drop_to;
 
   // The fields below are not used by scheduler and modules below, these
   // are used by WMS.
@@ -40,6 +40,8 @@ struct WmsMission {
 
   WmsMission() = default;
   WmsMission(int id) : id(id) {};
+
+  WmsMission &operator=(const WmsMission &o) = default;
 
   bool operator<(const WmsMission &o) const {
     return id < o.id;

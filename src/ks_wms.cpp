@@ -5,8 +5,9 @@
 #include <cassert>
 
 #include "constants.h"
-#include "utilities.h"
+#include "ks_scheduler.h"
 #include "logger.h"
+#include "utilities.h"
 
 namespace ks {
 
@@ -78,13 +79,13 @@ void KsWms::GenSpToOpMissions() {
 
     m.shelf_id = from.shelf_id;
     assert(from.shelf_id != -1);
-    m.from.type = LocationType::STORAGE_POINT;
-    m.from.index = from.index;
-    m.from.loc = shelf_storage_points_[from.index];
+    m.pick_from.type = LocationType::STORAGE_POINT;
+    m.pick_from.index = from.index;
+    m.pick_from.loc = shelf_storage_points_[from.index];
 
-    m.to.type = LocationType::OPERATION_POINT;
-    m.to.index = to.index;
-    m.to.loc = shelf_operation_points_[to.index];
+    m.drop_to.type = LocationType::OPERATION_POINT;
+    m.drop_to.index = to.index;
+    m.drop_to.loc = shelf_operation_points_[to.index];
 
     pending_missions_.insert(m);
     scheduler_p_->AddMission(m);
@@ -107,13 +108,13 @@ void KsWms::GenOpToSpMissions() {
 
         m.shelf_id = from.shelf_id;
         assert(from.shelf_id != -1);
-        m.from.type = LocationType::OPERATION_POINT;
-        m.from.index = from.index;
-        m.from.loc = shelf_storage_points_[from.index];
+        m.pick_from.type = LocationType::OPERATION_POINT;
+        m.pick_from.index = from.index;
+        m.pick_from.loc = shelf_storage_points_[from.index];
 
-        m.to.type = LocationType::STORAGE_POINT;
-        m.to.index = to.index;
-        m.to.loc = shelf_operation_points_[to.index];
+        m.drop_to.type = LocationType::STORAGE_POINT;
+        m.drop_to.index = to.index;
+        m.drop_to.loc = shelf_operation_points_[to.index];
 
         pending_missions_.insert(m);
         scheduler_p_->AddMission(m);
@@ -150,22 +151,22 @@ void KsWms::ProcessReports() {
     tmp_mq.pop();
     const WmsMission &m = GetPendingMission(report.mission_id);
     if (report.type == MissionReportType::PICKUP_DONE) {
-      if (m.from.type == LocationType::STORAGE_POINT) {
-        storage_point_info_[m.from.index].shelf_id = -1;
-        storage_point_info_[m.from.index].scheduled_to_change = false;
-      } else if (m.from.type == LocationType::OPERATION_POINT) {
-        operation_point_info_[m.from.index].scheduled_to_change = false;
+      if (m.pick_from.type == LocationType::STORAGE_POINT) {
+        storage_point_info_[m.pick_from.index].shelf_id = -1;
+        storage_point_info_[m.pick_from.index].scheduled_to_change = false;
+      } else if (m.pick_from.type == LocationType::OPERATION_POINT) {
+        operation_point_info_[m.pick_from.index].scheduled_to_change = false;
       } else {
         exit(0);
       }
     } else if (report.type == MissionReportType::MISSION_DONE) {
-      if (m.to.type == LocationType::STORAGE_POINT) {
-        storage_point_info_[m.to.index].shelf_id = m.shelf_id;
-        storage_point_info_[m.to.index].scheduled_to_change = false;
-      } else if (m.to.type == LocationType::OPERATION_POINT) {
-        operation_point_info_[m.to.index].shelf_id = m.shelf_id;
-        operation_point_info_[m.to.index].start_time = GetCurrentTime();
-        operation_point_info_[m.to.index].scheduled_to_change = false;
+      if (m.drop_to.type == LocationType::STORAGE_POINT) {
+        storage_point_info_[m.drop_to.index].shelf_id = m.shelf_id;
+        storage_point_info_[m.drop_to.index].scheduled_to_change = false;
+      } else if (m.drop_to.type == LocationType::OPERATION_POINT) {
+        operation_point_info_[m.drop_to.index].shelf_id = m.shelf_id;
+        operation_point_info_[m.drop_to.index].start_time = GetCurrentTime();
+        operation_point_info_[m.drop_to.index].scheduled_to_change = false;
         move_to_op_mission_count_--;
       } else {
         exit(0);

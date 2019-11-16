@@ -1,6 +1,7 @@
-#Kiva Simulation
+# Kiva Simulation
 
-##Implementation Notes
+## Implementation Notes
+
 1. In this project communication between modules is written
 as function call(receiver maintains a message queue with lock),
 as compare to using RPC systems like Stubby. The advantage of this

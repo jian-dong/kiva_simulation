@@ -6,11 +6,11 @@
 
 namespace ks {
 
-void log(const std::string &s) {
+inline void log(const std::string &s) {
   std::cout << s << std::endl;
 }
 
-void LogFatal(const std::string &s) {
+inline void LogFatal(const std::string &s) {
   log(s);
   exit(0);
 }
