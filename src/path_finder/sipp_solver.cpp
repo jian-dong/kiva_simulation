@@ -58,17 +58,17 @@ void SippSolver::PlanInternalMission(const RobotInfo &robot, ActionWithTimeSeq *
 
 void SippSolver::PlanWmsMission(const RobotInfo &robot, ActionWithTimeSeq *rtn) {
   // Plan for the first half.
-  double second_half_start_time = 0;
+  int second_half_start_time_ms = 0;
   RobotInfo tmp_robot = robot;
   if (!robot.shelf_attached) {
     SippAstar astar(map_, safe_intervals_, shelf_manager_);
     ActionWithTimeSeq new_actions = astar.GetActions(0, false, robot.pos,
                                                robot.mission.wms_mission.pick_from.loc);
     if (!new_actions.empty()) {
-      second_half_start_time = new_actions.back().end_time;
+      second_half_start_time_ms = new_actions.back().end_time_ms;
     }
-    new_actions.push_back({Action::ATTACH, second_half_start_time,
-                           second_half_start_time + GetActionCostInTime(Action::ATTACH)});
+    new_actions.push_back({Action::ATTACH, second_half_start_time_ms,
+                           second_half_start_time_ms + GetActionCostInTime(Action::ATTACH)});
     AppendToVector(new_actions, rtn);
 
     for (const ActionWithTime &e : new_actions) {
@@ -78,7 +78,7 @@ void SippSolver::PlanWmsMission(const RobotInfo &robot, ActionWithTimeSeq *rtn) 
 
   // Plan for the second half.
   SippAstar astar(map_, safe_intervals_, shelf_manager_);
-  const auto &new_actions = astar.GetActions(second_half_start_time,
+  const auto &new_actions = astar.GetActions(second_half_start_time_ms,
                                              true,
                                              tmp_robot.pos,
                                              robot.mission.wms_mission.drop_to.loc);
@@ -86,27 +86,22 @@ void SippSolver::PlanWmsMission(const RobotInfo &robot, ActionWithTimeSeq *rtn) 
   UpdateSafeIntervalsWithActions(0, robot.pos, *rtn);
 }
 
-void SippSolver::UpdateSafeIntervalsWithActions(double start_time, Position pos, const ActionWithTimeSeq &seq) {
+void SippSolver::UpdateSafeIntervalsWithActions(int start_time_ms, Position pos, const ActionWithTimeSeq &seq) {
   for (ActionWithTime awt : seq) {
-    cout << "position: " << pos.to_string() << " action: " << awt.to_string() << endl;
+//    cout << "position: " << pos.to_string() << " action: " << awt.to_string() << endl;
     if (awt.action != Action::MOVE) {
       pos = ApplyActionOnPosition(awt.action, pos);
       continue;
     }
 
-    double prev_interval_end = awt.start_time + kBufferDuration;
-    safe_intervals_.at(pos.loc).RemoveInterval(start_time, prev_interval_end);
+    int prev_interval_end_ms = awt.start_time_ms + kBufferDurationMs;
+    safe_intervals_.at(pos.loc).RemoveInterval(start_time_ms, prev_interval_end_ms);
     pos = ApplyActionOnPosition(awt.action, pos);
-    start_time = awt.end_time - kBufferDuration;
+    start_time_ms = awt.end_time_ms - kBufferDurationMs;
   }
 
-  safe_intervals_.at(pos.loc).RemoveInterval(start_time);
-
-  for (int y = 0; y < 6; y++) {
-    Location loc(0, y);
-    cout << "Location: " << loc.to_string() << endl;
-    cout << "safe interval sequence: " << safe_intervals_.at(loc).to_string() << endl;
-  }
+//  cout << "last position: " << pos.to_string() << endl;
+  safe_intervals_.at(pos.loc).RemoveInterval(start_time_ms);
 }
 
 }

@@ -5,24 +5,19 @@
 #include "ks_scheduler_common.h"
 
 namespace ks {
+
 namespace sipp_astar {
 
 using namespace std;
 
-namespace {
-double GetManhattanDistance(const Location& a, const Location& b) {
-  return abs(a.x - b.x) + abs(a.y - b.y);
-}
-}
-
-ActionWithTimeSeq SippAstar::GetActions(double start_time,
+ActionWithTimeSeq SippAstar::GetActions(int start_time_ms,
                                         bool has_shelf,
                                         Position pos,
                                         Location dest) {
   has_shelf_ = has_shelf;
   dest_ = dest;
   src_ = {pos, 0, 0};
-  State start(pos, start_time, 0, 0, GetHeuristic(pos.loc, dest_));
+  State start(pos, start_time_ms, 0, 0, GetHeuristicMs(pos.loc, dest_));
   open_.push(start);
 
   State cur_state;
@@ -67,9 +62,10 @@ ActionWithTimeSeq SippAstar::GetActions(double start_time,
   return ActionWithTimeSeq();
 }
 
-double SippAstar::GetHeuristic(Location a, Location b) {
+int SippAstar::GetHeuristicMs(Location a, Location b) {
   // TODO: add turning cost into consideration.
-  return GetManhattanDist(a, b);
+  // This program assumes the moving speed is 1 meter per second.
+  return GetManhattanDist(a, b) * kMillisecondsPerSecond;
 }
 
 std::vector<std::pair<State, ActionWithTime>> SippAstar::GenSuccessors(const State &cur_state) {
@@ -82,10 +78,10 @@ std::vector<std::pair<State, ActionWithTime>> SippAstar::GenSuccessors(const Sta
     if (has_shelf_ && shelf_manager_->HasShelf(new_pos.loc)) {
       continue;
     }
-    double action_duration = GetActionCostInTime(a);
-    double arrival_time_start = cur_state.stp.time + action_duration;
+    int action_duration = GetActionCostInTime(a);
+    int arrival_time_start = cur_state.stp.time_ms + action_duration;
     // May change the way to calculate end time to add a safe interval.
-    double arrival_time_end = GetSafeInterval(cur_state.stp).end
+    int arrival_time_end = GetSafeInterval(cur_state.stp).end_ms
         + action_duration;
     assert(arrival_time_start < arrival_time_end);
     for (int i = 0; i < safe_intervals_.at(new_pos.loc).Size(); i++) {
@@ -93,15 +89,12 @@ std::vector<std::pair<State, ActionWithTime>> SippAstar::GenSuccessors(const Sta
       if (!interval.Intersects(arrival_time_start, arrival_time_end)) {
         continue;
       }
-//      if (interval.start + 2 * kBufferDuration > interval.end) {
-//        continue;
-//      }
-      double arrival_time = max(arrival_time_start, interval.start + kBufferDuration);
-      if (arrival_time + kBufferDuration > interval.end) {
+      int arrival_time = max(arrival_time_start, interval.start_ms + kBufferDurationMs);
+      if (arrival_time + kBufferDurationMs > interval.end_ms) {
         continue;
       }
 
-      State new_state(new_pos, arrival_time, i, arrival_time, GetHeuristic(new_pos.loc, dest_));
+      State new_state(new_pos, arrival_time, i, arrival_time, GetHeuristicMs(new_pos.loc, dest_));
       rtn.push_back(make_pair(new_state, ActionWithTime(a, arrival_time - action_duration, arrival_time)));
     }
   }
@@ -121,10 +114,6 @@ ActionWithTimeSeq SippAstar::GenActionSeq(State cur_state) {
 }
 
 Interval SippAstar::GetSafeInterval(SpatioTemporalPoint stp) {
-  if (safe_intervals_.find(stp.pos.loc) == safe_intervals_.end()) {
-    LogFatal("Invalid interval 2");
-  }
-
   return safe_intervals_.at(stp.pos.loc).Get(stp.safe_interval_index);
 }
 

@@ -14,38 +14,40 @@ namespace sipp_astar {
 
 struct SpatioTemporalPoint {
   Position pos;
-  // Seconds since the start of scheduling.
-  double time;
+  // Milliseconds since the start of scheduling.
+  int time_ms;
   int safe_interval_index;
 
   SpatioTemporalPoint() = default;
-  SpatioTemporalPoint(Position pos, double time, int safe_interval_index)
+  SpatioTemporalPoint(Position pos, int time_ms, int safe_interval_index)
       : pos(pos),
-        time(time),
+        time_ms(time_ms),
         safe_interval_index(safe_interval_index) {};
 
-  SpatioTemporalPoint& operator=(const SpatioTemporalPoint& o) = default;
+  SpatioTemporalPoint &operator=(const SpatioTemporalPoint &o) = default;
 
-  bool operator<(const SpatioTemporalPoint& o) const {
+  bool operator<(const SpatioTemporalPoint &o) const {
     if (pos != o.pos) {
       return pos < o.pos;
     }
-    if (!DoubleEquals(time, o.time)) {
-      return time < o.time;
+    if (time_ms != o.time_ms) {
+      return time_ms < o.time_ms;
     }
     return safe_interval_index < o.safe_interval_index;
   }
 
-  bool operator==(const SpatioTemporalPoint& o) const {
-    return pos == o.pos && DoubleEquals(time, o.time) && safe_interval_index == o.safe_interval_index;
+  bool operator==(const SpatioTemporalPoint &o) const {
+    return pos == o.pos
+        && time_ms == o.time_ms
+        && safe_interval_index == o.safe_interval_index;
   }
 
-  bool operator!=(const SpatioTemporalPoint& o) const {
+  bool operator!=(const SpatioTemporalPoint &o) const {
     return !operator==(o);
   }
 
   std::string to_string() {
-    return pos.to_string() + " " + std::to_string(time) + " " + std::to_string(safe_interval_index);
+    return pos.to_string() + " " + std::to_string(time_ms) + " " + std::to_string(safe_interval_index);
   }
 };
 
@@ -59,13 +61,13 @@ struct PrevState {
 
 struct State {
   SpatioTemporalPoint stp;
-
-  double past_cost;
-  double heuristic;
+  // Past cost and heuristic are both in milliseconds.
+  int past_cost;
+  int heuristic;
 
   State() = default;
-  State(Position pos, double time, int safe_interval_index, double past_cost, double heuristic)
-      : stp(pos, time, safe_interval_index),
+  State(Position pos, int time_ms, int safe_interval_index, int past_cost, int heuristic)
+      : stp(pos, time_ms, safe_interval_index),
         past_cost(past_cost),
         heuristic(heuristic) {};
 
@@ -75,33 +77,32 @@ struct State {
     }
     return heuristic > o.heuristic;
   }
-
-
 };
 
 class SippAstar {
  public:
   SippAstar(const KsMap &ks_map,
-      const std::map<Location, IntervalSeq> &safe_intervals,
-      ShelfManager* shelf_manager)
+            const std::map<Location, IntervalSeq> &safe_intervals,
+            ShelfManager *shelf_manager)
       : map_(ks_map), safe_intervals_(safe_intervals), shelf_manager_(shelf_manager) {};
 
   // Return a sequence of actions to move the robot from src to dest.
-  ActionWithTimeSeq GetActions(double start_time, bool has_shelf, Position pos, Location dest);
+  ActionWithTimeSeq GetActions(int start_time_ms, bool has_shelf, Position pos, Location dest);
  private:
-  double GetHeuristic(Location a, Location b);
+  // Return the heuristic(in milliseconds) from source to destination.
+  int GetHeuristicMs(Location a, Location b);
   std::vector<std::pair<State, ActionWithTime>> GenSuccessors(const State &cur_state);
   ActionWithTimeSeq GenActionSeq(State cur_state);
 
   Interval GetSafeInterval(SpatioTemporalPoint stp);
 
   const KsMap &map_;
-  ShelfManager* shelf_manager_;
+  ShelfManager *shelf_manager_;
   const std::map<Location, IntervalSeq> &safe_intervals_;
 
   std::set<SpatioTemporalPoint> closed_;
   std::priority_queue<State> open_;
-  std::map<SpatioTemporalPoint, double> g_value_;
+  std::map<SpatioTemporalPoint, int> g_value_;
   std::map<SpatioTemporalPoint, PrevState> prev_;
 
   SpatioTemporalPoint src_;

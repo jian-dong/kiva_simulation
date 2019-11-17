@@ -17,29 +17,29 @@ namespace ks {
 class ShelfManager;
 
 struct Interval {
-  double start;
-  double end;
-  Interval(double start, double end) : start(start), end(end) {};
+  int start_ms;
+  int end_ms;
+  Interval(int start_ms, int end_ms) : start_ms(start_ms), end_ms(end_ms) {};
 
-  bool Includes(double time) const {
-    return time >= start && time <= end;
+  bool Includes(int time_ms) const {
+    return time_ms >= start_ms && time_ms <= end_ms;
   }
 
-  bool Intersects(double o_start, double o_end) const {
-    return (start < o_start && o_start < end) || (start < o_end && o_end < end);
+  bool Intersects(int o_start_ms, int o_end_ms) const {
+    return (start_ms < o_start_ms && o_start_ms < end_ms) || (start_ms < o_end_ms && o_end_ms < end_ms);
   }
 
-  double Length() {
-    assert(end >= start);
-    return end - start;
+  int Length() {
+    assert(end_ms >= start_ms);
+    return end_ms - start_ms;
   }
 
   bool operator<(const Interval &o) const {
-    return start < o.start;
+    return start_ms < o.start_ms;
   }
 
   std::string to_string() {
-    return std::to_string(start) + "->" + (end >= kDoubleInf ? "INF" : std::to_string(end));
+    return std::to_string(start_ms) + "->" + (end_ms >= kIntInf ? "INF" : std::to_string(end_ms));
   }
 };
 
@@ -48,46 +48,46 @@ class IntervalSeq {
   std::vector<Interval> intervals_;
   IntervalSeq() {
     intervals_.clear();
-    intervals_.emplace_back(0, kDoubleInf);
+    intervals_.emplace_back(0, kIntInf);
   };
 
   IntervalSeq(const IntervalSeq &o) {
     intervals_ = o.intervals_;
   };
 
-  void RemoveInterval(double start, double end) {
-    std::cout << "removal: start: " << std::to_string(start) << " end: " << std::to_string(end) << std::endl;
-    int index = GetIntervalIndex(start);
+  void RemoveInterval(int start_ms, int end_ms) {
+//    std::cout << "removal: start: " << std::to_string(start) << " end: " << std::to_string(end) << std::endl;
+    int index = GetIntervalIndex(start_ms);
     Interval tmp = intervals_[index];
     intervals_.erase(intervals_.begin() + index);
-    Interval tmp_1 = Interval(tmp.start, start);
-    Interval tmp_2 = Interval(end, tmp.end);
-    if (tmp_1.Length() > 2 * kBufferDuration) {
+    Interval tmp_1 = Interval(tmp.start_ms, start_ms);
+    Interval tmp_2 = Interval(end_ms, tmp.end_ms);
+    if (tmp_1.Length() > 2 * kBufferDurationMs) {
       intervals_.push_back(tmp_1);
     }
-    if (tmp_2.Length() > 2 * kBufferDuration) {
+    if (tmp_2.Length() > 2 * kBufferDurationMs) {
       intervals_.push_back(tmp_2);
     }
     std::sort(intervals_.begin(), intervals_.end());
     SanityCheck();
   }
 
-  void RemoveInterval(double start) {
-    std::cout << "removal: start: " << std::to_string(start) << std::endl;
-    int index = GetIntervalIndex(start);
+  void RemoveInterval(int start_ms) {
+//    std::cout << "removal: start: " << std::to_string(start) << std::endl;
+    int index = GetIntervalIndex(start_ms);
     Interval tmp = intervals_[index];
     intervals_.erase(intervals_.begin() + index, intervals_.end());
 
-    Interval last = Interval(tmp.start, start);
-    if (last.Length() > 2 * kBufferDuration) {
+    Interval last = Interval(tmp.start_ms, start_ms);
+    if (last.Length() > 2 * kBufferDurationMs) {
       intervals_.push_back(last);
     }
     SanityCheck();
   }
 
-  int GetIntervalIndex(double time) {
+  int GetIntervalIndex(int time_ms) {
     for (int i = 0; i < intervals_.size(); i++) {
-      if (intervals_[i].Includes(time)) {
+      if (intervals_[i].Includes(time_ms)) {
         return i;
       }
     }
@@ -117,7 +117,7 @@ class IntervalSeq {
  private:
   void SanityCheck() const {
     for (int i = 0; i < ((int) intervals_.size() - 1); i++) {
-      if (intervals_[i].end > intervals_[i + 1].start) {
+      if (intervals_[i].end_ms > intervals_[i + 1].start_ms) {
         LogFatal("Invalid interval." + to_string());
       }
     }
@@ -143,7 +143,7 @@ class SippSolver {
  private:
   void PlanInternalMission(const RobotInfo &robot, ActionWithTimeSeq *rtn);
   void PlanWmsMission(const RobotInfo &robot, ActionWithTimeSeq *rtn);
-  void UpdateSafeIntervalsWithActions(double start_time, Position pos, const ActionWithTimeSeq &seq);
+  void UpdateSafeIntervalsWithActions(int start_time_ms, Position pos, const ActionWithTimeSeq &seq);
 
   const KsMap &map_;
   ShelfManager* shelf_manager_;

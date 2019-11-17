@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <cfloat>
+#include <climits>
 
 #include "common_types.h"
 
@@ -36,13 +37,13 @@ const int kRestAreaCount = 152;
 
 // SIPP related.
 const double kDoubleInf = DBL_MAX / 2;
+const int kIntInf = INT_MAX / 2;
+
 const std::set<Action> kSippActions = {
     Action::MOVE,
     Action::CTURN,
     Action::CCTURN
 };
-// A one second buffer before and after an action.
-const double kBufferDuration = 1;
 
 // Robot manager related.
 const std::map<Direction, std::pair<int, int>> kDirectionToDelta =
@@ -73,6 +74,9 @@ const int kTurnDurationMs = 2000;
 const int kAttachDetachDurationMs = 3000;
 const int kMoveDurationMs = 1000;
 const int kWaitDurationMs = 1000;
+// The buffer duration is at least the move duration.
+const int kBufferDurationMs = kMoveDurationMs;
+const int kMillisecondsPerSecond = 1000;
 
 const char *const kRedisHostname = "127.0.0.1";
 const int kRedisPort = 6379;

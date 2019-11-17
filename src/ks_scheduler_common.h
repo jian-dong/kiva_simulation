@@ -117,17 +117,17 @@ inline Position ApplyActionOnPosition(Action a, Position p) {
 
 struct ActionWithTime {
   Action action;
-  double start_time;
-  double end_time;
+  int start_time_ms;
+  int end_time_ms;
 
   ActionWithTime() = default;
-  ActionWithTime(Action action, double start_time, double end_time)
-      : action(action), start_time(start_time), end_time(end_time) {};
+  ActionWithTime(Action action, int start_time_ms, int end_time_ms)
+      : action(action), start_time_ms(start_time_ms), end_time_ms(end_time_ms) {};
 
   std::string to_string() const {
     return kActionToString.at(action)
-    + " start: " + DoubleToString(start_time)
-    + " end: " + DoubleToString(end_time);
+    + " start: " + std::to_string(start_time_ms)
+    + " end: " + std::to_string(end_time_ms);
   }
 };
 

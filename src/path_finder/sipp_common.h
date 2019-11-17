@@ -6,15 +6,15 @@
 #include "constants.h"
 
 namespace ks {
-inline double GetActionCostInTime(Action a) {
+inline int GetActionCostInTime(Action a) {
   if (a == Action::ATTACH || a == Action::DETACH) {
-    return ((double) kAttachDetachDurationMs) / 1000;
+    return kAttachDetachDurationMs;
   }
   if (a == Action::CCTURN || a == Action::CTURN) {
-    return ((double) kTurnDurationMs) / 1000;
+    return kTurnDurationMs;
   }
   if (a == Action::MOVE) {
-    return ((double) kMoveDurationMs) / 1000;
+    return kMoveDurationMs;
   }
   if (a == Action::YIELD) {
     LogFatal("Invalid action for SIPP.");
