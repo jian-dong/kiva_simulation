@@ -1,7 +1,10 @@
 #ifndef KIVA_SIMULATION_SRC_KS_SCHEDULER_COMMON_H_
 #define KIVA_SIMULATION_SRC_KS_SCHEDULER_COMMON_H_
 
+#include <mutex>
+
 #include "constants.h"
+#include "utilities.h"
 #include "interface/wms_scheduler_types.h"
 
 namespace ks {
@@ -38,6 +41,10 @@ struct Position {
 
   bool operator!=(const Position &o) const {
     return !operator==(o);
+  }
+
+  std::string to_string() {
+    return loc.to_string() + " " + kDirectionToString.at(dir);
   }
 };
 
@@ -116,9 +123,42 @@ struct ActionWithTime {
   ActionWithTime() = default;
   ActionWithTime(Action action, double start_time, double end_time)
       : action(action), start_time(start_time), end_time(end_time) {};
+
+  std::string to_string() const {
+    return kActionToString.at(action)
+    + " start: " + DoubleToString(start_time)
+    + " end: " + DoubleToString(end_time);
+  }
 };
 
 using ActionWithTimeSeq = std::vector<ActionWithTime>;
+
+class ShelfManager {
+ public:
+  ShelfManager() = default;
+
+  void AddMapping(int shelf_id, Location loc) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    assert(loc_to_id_.find(loc) == loc_to_id_.end());
+    loc_to_id_[loc] = shelf_id;
+  }
+
+  void RemoveMapping(int shelf_id, Location loc) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    assert(loc_to_id_.find(loc) == loc_to_id_.end());
+    loc_to_id_.erase(loc);
+    loc_to_id_.erase(loc);
+  }
+
+  bool HasShelf(Location loc) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return loc_to_id_.find(loc) != loc_to_id_.end();
+  }
+
+ private:
+  std::mutex mutex_;
+  std::map<Location, int> loc_to_id_;
+};
 
 }
 #endif

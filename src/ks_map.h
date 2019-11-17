@@ -20,6 +20,7 @@ class KsMap {
 
  private:
   char map_[kXLimit][kYLimit];
+  int actual_x_limit_, actual_y_limit_;
 
   // Constants.
   // Shelf operation points.

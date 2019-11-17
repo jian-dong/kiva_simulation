@@ -12,7 +12,7 @@ using namespace std;
 KsMap::KsMap(std::string file_name) {
   ifstream input(file_name);
   if (!input) {
-    cout << "Cannot open map file" << endl;
+    cout << "Cannot open map file." << endl;
     exit(0);
   }
 
@@ -27,8 +27,12 @@ KsMap::KsMap(std::string file_name) {
   }
   input.close();
 
-  for (int x = 0; x < kXLimit; x++) {
-    for (int y = 0; y < kYLimit; y++) {
+  actual_x_limit_ = atoi(buffer[0].c_str());
+  actual_y_limit_ = atoi(buffer[1].c_str());
+  buffer.erase(buffer.begin(), buffer.begin() + 2);
+
+  for (int x = 0; x < actual_x_limit_; x++) {
+    for (int y = 0; y < actual_y_limit_; y++) {
       map_[x][y] = buffer[x][y];
 
       if (map_[x][y] == kShelfOperationPoint) {
@@ -65,7 +69,7 @@ const std::vector<Location> &KsMap::GetRestAreas() const {
 
 bool KsMap::IsLocationPassable(const Location &loc) const {
   int x = loc.x, y = loc.y;
-  if (x < 0 || x >= kXLimit || y < 0 || y >= kYLimit) {
+  if (x < 0 || x >= actual_x_limit_ || y < 0 || y >= actual_y_limit_) {
     return false;
   }
   return map_[x][y] != 'B' && map_[x][y] != 'O' && map_[x][y] != 'T';

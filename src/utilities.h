@@ -55,7 +55,11 @@ inline int DoubleEquals(double a, double b) {
   return fabs(a - b) < EPS;
 }
 
-
+inline std::string DoubleToString(double a) {
+  char buffer[256];
+  std::snprintf (buffer, 256 , "%.2f", a);
+  return buffer;
+}
 
 }
 #endif

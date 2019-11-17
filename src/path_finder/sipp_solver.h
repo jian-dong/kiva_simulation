@@ -14,6 +14,8 @@
 
 namespace ks {
 
+class ShelfManager;
+
 struct Interval {
   double start;
   double end;
@@ -35,6 +37,10 @@ struct Interval {
   bool operator<(const Interval &o) const {
     return start < o.start;
   }
+
+  std::string to_string() {
+    return std::to_string(start) + "->" + (end >= kDoubleInf ? "INF" : std::to_string(end));
+  }
 };
 
 class IntervalSeq {
@@ -50,10 +56,10 @@ class IntervalSeq {
   };
 
   void RemoveInterval(double start, double end) {
+    std::cout << "removal: start: " << std::to_string(start) << " end: " << std::to_string(end) << std::endl;
     int index = GetIntervalIndex(start);
     Interval tmp = intervals_[index];
     intervals_.erase(intervals_.begin() + index);
-
     Interval tmp_1 = Interval(tmp.start, start);
     Interval tmp_2 = Interval(end, tmp.end);
     if (tmp_1.Length() > 2 * kBufferDuration) {
@@ -67,6 +73,7 @@ class IntervalSeq {
   }
 
   void RemoveInterval(double start) {
+    std::cout << "removal: start: " << std::to_string(start) << std::endl;
     int index = GetIntervalIndex(start);
     Interval tmp = intervals_[index];
     intervals_.erase(intervals_.begin() + index, intervals_.end());
@@ -99,16 +106,17 @@ class IntervalSeq {
     return intervals_.at(i);
   }
 
-  std::string to_string() {
+  std::string to_string() const {
     std::string rtn;
     for (Interval interval : intervals_) {
-      rtn += std::to_string(interval.start) + " " + std::to_string(interval.end) + ";";
+      rtn += interval.to_string() + ";";
     }
+    return rtn;
   }
 
  private:
-  void SanityCheck() {
-    for (int i = 0; i < intervals_.size() - 1; i++) {
+  void SanityCheck() const {
+    for (int i = 0; i < ((int) intervals_.size() - 1); i++) {
       if (intervals_[i].end > intervals_[i + 1].start) {
         LogFatal("Invalid interval." + to_string());
       }
@@ -123,12 +131,13 @@ struct PfRequest {
 
 struct PfResponse {
   // Includes all robots. Empty for no action(wait).
-  std::vector<ActionWithTimeSeq> action_seq;
+  std::vector<ActionWithTimeSeq> plan;
 };
 
 class SippSolver {
  public:
-  SippSolver(const KsMap &ks_map) : map_(ks_map) {};
+  SippSolver(const KsMap &ks_map, ShelfManager* shelf_manager)
+      : map_(ks_map), shelf_manager_(shelf_manager) {};
   PfResponse FindPath(const PfRequest &req);
 
  private:
@@ -137,7 +146,9 @@ class SippSolver {
   void UpdateSafeIntervalsWithActions(double start_time, Position pos, const ActionWithTimeSeq &seq);
 
   const KsMap &map_;
+  ShelfManager* shelf_manager_;
   std::map<Location, IntervalSeq> safe_intervals_;
+  int robot_count_;
 };
 
 }

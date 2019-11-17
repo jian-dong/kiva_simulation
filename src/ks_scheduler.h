@@ -57,6 +57,7 @@ class KsScheduler {
   // be protected by mutex_ and kept in sync.
   KsRobotManager robot_manager_;
   KsActionGraph action_graph_;
+  ShelfManager shelf_manager_;
   SippSolver* sipp_p_;
 };
 

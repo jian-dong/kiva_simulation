@@ -2,6 +2,8 @@
 
 #include <set>
 
+#include "ks_scheduler_common.h"
+
 namespace ks {
 namespace sipp_astar {
 
@@ -28,6 +30,8 @@ ActionWithTimeSeq SippAstar::GetActions(double start_time,
   while (!open_.empty()) {
     cur_state = open_.top();
     open_.pop();
+
+//    cout << "examing state: " + cur_state.stp.to_string() << endl;
 
     if (cur_state.stp.pos.loc == dest_) {
       return GenActionSeq(cur_state);
@@ -75,11 +79,13 @@ std::vector<std::pair<State, ActionWithTime>> SippAstar::GenSuccessors(const Sta
     if (!map_.IsLocationPassable(new_pos.loc)) {
       continue;
     }
+    if (has_shelf_ && shelf_manager_->HasShelf(new_pos.loc)) {
+      continue;
+    }
     double action_duration = GetActionCostInTime(a);
     double arrival_time_start = cur_state.stp.time + action_duration;
     // May change the way to calculate end time to add a safe interval.
     double arrival_time_end = GetSafeInterval(cur_state.stp).end
-        - kBufferDuration
         + action_duration;
     assert(arrival_time_start < arrival_time_end);
     for (int i = 0; i < safe_intervals_.at(new_pos.loc).Size(); i++) {
@@ -87,10 +93,14 @@ std::vector<std::pair<State, ActionWithTime>> SippAstar::GenSuccessors(const Sta
       if (!interval.Intersects(arrival_time_start, arrival_time_end)) {
         continue;
       }
-      if (interval.start + 2 * kBufferDuration > interval.end) {
+//      if (interval.start + 2 * kBufferDuration > interval.end) {
+//        continue;
+//      }
+      double arrival_time = max(arrival_time_start, interval.start + kBufferDuration);
+      if (arrival_time + kBufferDuration > interval.end) {
         continue;
       }
-      double arrival_time = max(arrival_time_start, interval.start + kBufferDuration);
+
       State new_state(new_pos, arrival_time, i, arrival_time, GetHeuristic(new_pos.loc, dest_));
       rtn.push_back(make_pair(new_state, ActionWithTime(a, arrival_time - action_duration, arrival_time)));
     }
@@ -106,10 +116,15 @@ ActionWithTimeSeq SippAstar::GenActionSeq(State cur_state) {
     rtn.push_back(prev.action_with_time);
     stp = prev.stp;
   }
+  std::reverse(rtn.begin(), rtn.end());
   return rtn;
 }
 
 Interval SippAstar::GetSafeInterval(SpatioTemporalPoint stp) {
+  if (safe_intervals_.find(stp.pos.loc) == safe_intervals_.end()) {
+    LogFatal("Invalid interval 2");
+  }
+
   return safe_intervals_.at(stp.pos.loc).Get(stp.safe_interval_index);
 }
 

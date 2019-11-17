@@ -43,6 +43,10 @@ struct SpatioTemporalPoint {
   bool operator!=(const SpatioTemporalPoint& o) const {
     return !operator==(o);
   }
+
+  std::string to_string() {
+    return pos.to_string() + " " + std::to_string(time) + " " + std::to_string(safe_interval_index);
+  }
 };
 
 struct PrevState {
@@ -71,12 +75,16 @@ struct State {
     }
     return heuristic > o.heuristic;
   }
+
+
 };
 
 class SippAstar {
  public:
-  SippAstar(const KsMap &ks_map, const std::map<Location, IntervalSeq> &safe_intervals)
-      : map_(ks_map), safe_intervals_(safe_intervals) {};
+  SippAstar(const KsMap &ks_map,
+      const std::map<Location, IntervalSeq> &safe_intervals,
+      ShelfManager* shelf_manager)
+      : map_(ks_map), safe_intervals_(safe_intervals), shelf_manager_(shelf_manager) {};
 
   // Return a sequence of actions to move the robot from src to dest.
   ActionWithTimeSeq GetActions(double start_time, bool has_shelf, Position pos, Location dest);
@@ -88,6 +96,7 @@ class SippAstar {
   Interval GetSafeInterval(SpatioTemporalPoint stp);
 
   const KsMap &map_;
+  ShelfManager* shelf_manager_;
   const std::map<Location, IntervalSeq> &safe_intervals_;
 
   std::set<SpatioTemporalPoint> closed_;

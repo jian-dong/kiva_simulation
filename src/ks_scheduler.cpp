@@ -39,7 +39,7 @@ void KsScheduler::Init(KsWms *wms_p, KsSimulator *simulator_p) {
 
   robot_manager_.Init(wms_p);
 
-  sipp_p_ = new SippSolver(map_);
+  sipp_p_ = new SippSolver(map_, &shelf_manager_);
 }
 
 void KsScheduler::Run() {
@@ -71,7 +71,7 @@ void KsScheduler::Run() {
 
     PfResponse resp = sipp_p_->FindPath({robot_info});
     mutex_.lock();
-    action_graph_.SetPlan(resp.action_seq);
+    action_graph_.SetPlan(resp.plan);
   }
 }
 

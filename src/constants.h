@@ -71,7 +71,7 @@ const Location kInvalidLocation = {-1, -1};
 
 const int kTurnDurationMs = 2000;
 const int kAttachDetachDurationMs = 3000;
-const int kMoveDurationMs = 1500;
+const int kMoveDurationMs = 1000;
 const int kWaitDurationMs = 1000;
 
 const char *const kRedisHostname = "127.0.0.1";

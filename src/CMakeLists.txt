@@ -60,3 +60,18 @@ target_link_libraries(
     gtest
     pthread
 )
+
+add_executable(
+    wms_test
+
+    ks_wms_test.cpp
+)
+
+target_link_libraries(
+    wms_test
+
+    ks
+    gmock
+    gtest
+    pthread
+)
