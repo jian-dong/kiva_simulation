@@ -147,7 +147,6 @@ class ShelfManager {
     std::lock_guard<std::mutex> lock(mutex_);
     assert(loc_to_id_.find(loc) == loc_to_id_.end());
     loc_to_id_.erase(loc);
-    loc_to_id_.erase(loc);
   }
 
   bool HasShelf(Location loc) {

@@ -2,7 +2,7 @@
 
 #include <optional>
 
-#include "interface/wms_scheduler_types.h"
+#include "interface/ks_api.h"
 #include "logger.h"
 #include "utilities.h"
 
@@ -10,7 +10,7 @@ namespace ks {
 
 using namespace std;
 
-void KsRobotManager::Init(KsWms *wms_p) {
+void KsRobotManager::Init(KsWmsApi *wms_p) {
   wms_p_ = wms_p;
   const vector<Location> &shelf_storage_points = map_.GetShelfStoragePoints();
   for (int i = 0; i < kRobotCount; i++) {

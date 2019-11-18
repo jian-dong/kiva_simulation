@@ -8,17 +8,14 @@
 #include "common_types.h"
 #include "ks_map.h"
 #include "ks_scheduler_common.h"
-#include "interface/wms_scheduler_types.h"
+#include "interface/ks_api.h"
 
 namespace ks {
-
-class KsWms;
-
 // A pure data class.
 class KsRobotManager {
  public:
   KsRobotManager(const KsMap &ks_map) : map_(ks_map), rest_areas_(ks_map.GetRestAreas()) {};
-  void Init(KsWms *wms_p);
+  void Init(KsWmsApi *wms_p);
 
   void AssignMissions(std::set<WmsMission> &missions);
   std::optional<MissionReport> UpdateRobotStatus(int robot_id, Action a);
@@ -37,7 +34,7 @@ class KsRobotManager {
   const KsMap &map_;
   const std::vector<Location>& rest_areas_;
   std::vector<int> rest_area_assignment_;
-  KsWms *wms_p_;
+  KsWmsApi *wms_p_;
 
   // Data.
   std::vector<RobotInfo> robot_info_;

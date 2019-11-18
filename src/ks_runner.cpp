@@ -11,27 +11,29 @@ void KsRunner::Start() {
 
   // Create stubs.
   map_p_ = new KsMap(kMapFileName);
-  simulator_p_ = new KsSimulator();
-  scheduler_p_ = new KsScheduler(*map_p_);
-  wms_p_ = new KsWms(*map_p_);
+  KsSimulator* simulator = new KsSimulator();
+  simulator_p_ = simulator;
+  KsScheduler* scheduler = new KsScheduler(*map_p_);
+  scheduler_p_ = scheduler;
+  KsWms* wms = new KsWms(*map_p_);
+  wms_p_ = wms;
 
   // Wire stubs up.
-  simulator_p_->Init(scheduler_p_, *map_p_);
-  scheduler_p_->Init(wms_p_, simulator_p_);
-  wms_p_->Init(scheduler_p_);
+  simulator->Init(scheduler_p_, *map_p_);
+  scheduler->Init(wms_p_, simulator_p_);
+  wms->Init(scheduler_p_);
 
   // Run.
-  std::thread t0(&KsSimulator::Run, simulator_p_);
+  std::thread t0(&KsSimulator::Run, simulator);
   t0.detach();
-//  std::this_thread::sleep_for(std::chrono::seconds(3));
 
-  std::thread t1(&KsScheduler::Run, scheduler_p_);
+  std::thread t1(&KsScheduler::Run, scheduler);
   t1.detach();
 
-  std::thread t2(&KsScheduler::AdgRunner, scheduler_p_);
+  std::thread t2(&KsScheduler::AdgRunner, scheduler);
   t2.detach();
 
-  wms_p_->Run();
+  wms->Run();
 }
 
 }

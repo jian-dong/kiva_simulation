@@ -3,8 +3,6 @@
 #include <set>
 #include <map>
 
-#include "ks_simulator.h"
-#include "ks_wms.h"
 #include "path_finder/sipp_solver.h"
 #include "utilities.h"
 
@@ -33,7 +31,7 @@ void KsScheduler::ReportActionDone(CommandReport r) {
   robot_report_.push(r);
 }
 
-void KsScheduler::Init(KsWms *wms_p, KsSimulator *simulator_p) {
+void KsScheduler::Init(KsWmsApi *wms_p, KsSimulatorApi *simulator_p) {
   wms_p_ = wms_p;
   simulator_p_ = simulator_p;
 

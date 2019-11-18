@@ -6,22 +6,18 @@
 #include <queue>
 
 #include "common_types.h"
-#include "ks_robotmanager.h"
+#include "interface/ks_api.h"
 #include "ks_actiongraph.h"
 #include "ks_map.h"
-#include "path_finder/sipp_solver.h"
-#include "interface/wms_scheduler_types.h"
-#include "interface/scheduler_simulator_types.h"
+#include "ks_robotmanager.h"
 #include "ks_scheduler_common.h"
+#include "path_finder/sipp_solver.h"
 
 namespace ks {
-class KsWms;
-class KsSimulator;
-
-class KsScheduler {
+class KsScheduler : public KsSchedulerApi {
  public:
   KsScheduler(const KsMap& ks_map) : map_(ks_map), robot_manager_(ks_map) {};
-  void Init(KsWms *wms_p, KsSimulator *simulator_p);
+  void Init(KsWmsApi *wms_p, KsSimulatorApi *simulator_p);
 
   // Thread 1, handle mission assignments, replan and generate the action dependency graph.
   void Run();
@@ -31,16 +27,14 @@ class KsScheduler {
   // 2. Send commands to robots.
   void AdgRunner();
 
-  void AddMission(WmsMission mission);
-  void ReportActionDone(CommandReport r);
-
-  const std::vector<RobotInfo>& GetRobotInfo() { return robot_manager_.GetRobotInfo(); };
+  void AddMission(WmsMission mission) override;
+  void ReportActionDone(CommandReport r) override;
 
  private:
 
   const KsMap& map_;
-  KsWms* wms_p_;
-  KsSimulator* simulator_p_;
+  KsWmsApi* wms_p_;
+  KsSimulatorApi* simulator_p_;
 
   // This structure is only accessed by thread 2, used as a cache, so no need to lock.
   std::vector<MissionReport> mq_to_wms_;

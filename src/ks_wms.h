@@ -7,11 +7,9 @@
 
 #include "common_types.h"
 #include "ks_map.h"
-#include "interface/wms_scheduler_types.h"
+#include "interface/ks_api.h"
 
 namespace ks {
-
-class KsScheduler;
 
 // WMS specific types.
 // A place holder for shelf info.
@@ -76,20 +74,20 @@ struct StoragePointInfo {
   };
 };
 
-class KsWms {
+class KsWms : public KsWmsApi {
  public:
   KsWms(const KsMap& ks_map) :
       shelf_operation_points_(ks_map.GetShelfOperationPoints()),
       shelf_storage_points_(ks_map.GetShelfStoragePoints()) {};
-  void Init(KsScheduler* scheduler_p);
+  void Init(KsSchedulerApi* scheduler_p);
   // Thread 1.
   void Run();
 
   // The mission status is reported in two steps.
-  void ReportMissionStatus(MissionReport r);
-  void ProcessReports();
+  void ReportMissionStatus(MissionReport r) override;
 
  private:
+  void ProcessReports();
   void GenOpToSpMissions();
   void GenSpToOpMissions();
 
@@ -97,7 +95,7 @@ class KsWms {
   const WmsMission& GetPendingMission(int id);
 
   // Data.
-  KsScheduler* scheduler_p_;
+  KsSchedulerApi* scheduler_p_;
 
   // Constant data structures.
   const std::vector<Location> shelf_operation_points_;

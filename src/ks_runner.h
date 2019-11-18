@@ -1,6 +1,7 @@
 #ifndef KIVA_SIMULATION_SRC_KS_RUNNER_H_
 #define KIVA_SIMULATION_SRC_KS_RUNNER_H_
 
+#include "interface/ks_api.h"
 #include "ks_map.h"
 #include "ks_scheduler.h"
 #include "ks_simulator.h"
@@ -15,9 +16,9 @@ class KsRunner {
 
  private:
   KsMap* map_p_;
-  KsWms* wms_p_;
-  KsScheduler* scheduler_p_;
-  KsSimulator* simulator_p_;
+  KsWmsApi* wms_p_;
+  KsSchedulerApi* scheduler_p_;
+  KsSimulatorApi* simulator_p_;
 };
 
 }

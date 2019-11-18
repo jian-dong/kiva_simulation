@@ -6,7 +6,6 @@
 #include "utilities.h"
 #include "hiredis/hiredis.h"
 #include "logger.h"
-#include "ks_scheduler.h"
 
 namespace ks {
 
@@ -31,13 +30,13 @@ milliseconds GetActionDuration(Action a) {
 
 }
 
-void KsSimulator::Init(KsScheduler *scheduler_p, const KsMap &ks_map) {
+void KsSimulator::Init(KsSchedulerApi *scheduler_p, const KsMap &ks_map) {
   scheduler_p_ = scheduler_p;
-  const std::vector<RobotInfo>& robot_info = scheduler_p_->GetRobotInfo();
-
-  for (int i = 0; i < robot_info.size(); i++) {
-    robot_status_.emplace_back(robot_info[i]);
-  }
+//  const std::vector<RobotInfo>& robot_info = scheduler_p_->GetRobotInfo();
+//
+//  for (int i = 0; i < robot_info.size(); i++) {
+//    robot_status_.emplace_back(robot_info[i]);
+//  }
 
   shelf_id_to_loc_.resize(kShelfCount);
   loc_to_shelf_id_.clear();

@@ -6,18 +6,14 @@
 #include <string>
 #include <queue>
 
+#include "interface/ks_api.h"
 #include "common_types.h"
-#include "utilities.h"
-#include "interface/scheduler_simulator_types.h"
-#include "hiredis/hiredis.h"
 #include "constants.h"
+#include "hiredis/hiredis.h"
 #include "ks_map.h"
-#include "ks_scheduler_common.h"
+#include "utilities.h"
 
 namespace ks {
-
-class KsScheduler;
-
 // Location with x, y as double values.
 struct LocationDouble {
   double x, y;
@@ -80,13 +76,13 @@ struct RobotStatus {
   std::queue<ActionProgress> pending_actions;
 
   RobotStatus() = default;
-  RobotStatus(const RobotInfo& r) {
-    id = r.id;
-    dir = r.pos.dir;
-    loc.x = r.pos.loc.x;
-    loc.y = r.pos.loc.y;
-    shelf_attached = false;
-  }
+//  RobotStatus(const RobotInfo& r) {
+//    id = r.id;
+//    dir = r.pos.dir;
+//    loc.x = r.pos.loc.x;
+//    loc.y = r.pos.loc.y;
+//    shelf_attached = false;
+//  }
 
   void OutputStatus(std::stringstream& str, const TimePoint& cur_time) {
     double x = loc.x, y = loc.y;
@@ -116,12 +112,12 @@ struct RobotStatus {
   }
 };
 
-class KsSimulator {
+class KsSimulator : public KsSimulatorApi {
  public:
   KsSimulator() = default;
-  void Init(KsScheduler *scheduler_p, const KsMap &ks_map);
+  void Init(KsSchedulerApi *scheduler_p, const KsMap &ks_map);
   void Run();
-  void AddActions(Command action_seq);
+  void AddActions(Command action_seq) override;
 
  private:
   void UpdateWithAction(RobotStatus &r, Action a);
@@ -131,7 +127,7 @@ class KsSimulator {
   std::mutex mutex_io_;
   std::queue<Command> mq_from_scheduler_;
 
-  KsScheduler* scheduler_p_;
+  KsSchedulerApi* scheduler_p_;
 
   // The simulator has only one thread, which periodically check the newly added action,
   // update robot status and write to redis. so there is no need to lock the main data

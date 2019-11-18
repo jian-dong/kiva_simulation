@@ -1,6 +1,8 @@
 #ifndef KIVA_SIMULATION_SRC_INTERFACE_WMS_SCHEDULER_TYPES_H_
 #define KIVA_SIMULATION_SRC_INTERFACE_WMS_SCHEDULER_TYPES_H_
 
+#include "common_types.h"
+
 namespace ks {
 // Scheduler to WMS.
 enum class MissionReportType {

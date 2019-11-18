@@ -34,7 +34,7 @@ T ReserviorSampling(const vector<T> &array, bool (T::*predicator)(void) const) {
 }
 }
 
-void KsWms::Init(KsScheduler *scheduler_p) {
+void KsWms::Init(KsSchedulerApi *scheduler_p) {
   scheduler_p_ = scheduler_p;
   for (int i = 0; i < kShelfOperationPointCount; i++) {
     operation_point_info_.emplace_back(i);
