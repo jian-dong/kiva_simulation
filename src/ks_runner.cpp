@@ -10,7 +10,7 @@ void KsRunner::Start() {
   srand(time(NULL));
 
   // Create stubs.
-  map_p_ = new KsMap(kMapFileName);
+  map_p_ = new KsMap(kMapFilePath);
   KsSimulator* simulator = new KsSimulator();
   simulator_p_ = simulator;
   KsScheduler* scheduler = new KsScheduler(*map_p_);

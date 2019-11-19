@@ -5,6 +5,8 @@
 #include <mutex>
 #include <string>
 #include <queue>
+#include <sstream>
+#include <iostream>
 
 #include "interface/ks_api.h"
 #include "common_types.h"
@@ -14,11 +16,17 @@
 #include "utilities.h"
 
 namespace ks {
-// Location with x, y as double values.
+
+// Location, with x, y as double values.
 struct LocationDouble {
   double x, y;
+
   LocationDouble() { x = -1; y = -1; };
   LocationDouble(double x, double y) : x(x), y(y) {};
+  explicit LocationDouble(const Location& o) {
+    x = o.x;
+    y = o.y;
+  }
 
   LocationDouble &operator=(const LocationDouble &o) {
     x = o.x;
@@ -60,8 +68,7 @@ struct ActionProgress {
 
   // Return progress, a double in [0, 1].
   double GetProgress(TimePoint cur) const {
-//    return (double)(cur - start_time) / (double)(end_time - start_time);
-    return 0;
+    return ((double)(cur - start_time).count()) / ((double)(end_time - start_time).count());
   }
 };
 
@@ -76,13 +83,10 @@ struct RobotStatus {
   std::queue<ActionProgress> pending_actions;
 
   RobotStatus() = default;
-//  RobotStatus(const RobotInfo& r) {
-//    id = r.id;
-//    dir = r.pos.dir;
-//    loc.x = r.pos.loc.x;
-//    loc.y = r.pos.loc.y;
-//    shelf_attached = false;
-//  }
+  RobotStatus(int id, Location loc) : id(id), loc(loc) {
+    dir = Direction::NORTH;
+    shelf_attached = false;
+  }
 
   void OutputStatus(std::stringstream& str, const TimePoint& cur_time) {
     double x = loc.x, y = loc.y;
@@ -91,6 +95,7 @@ struct RobotStatus {
     if (!pending_actions.empty()) {
       const ActionProgress& p = pending_actions.front();
       double progress = p.GetProgress(cur_time);
+      std::cout << "current progress: " << DoubleToString(progress) << std::endl;
       if (p.action == Action::MOVE) {
         const auto& delta = kDirectionToDelta.at(dir);
         x_modifier = delta.first * progress;
@@ -107,8 +112,8 @@ struct RobotStatus {
     y += y_modifier;
     dir_rad += dir_modifier;
 
-//    str << std::to_string(x) << " " << std::to_string(y) << " " << std::to_string(dir_rad)
-//        << " " << std::to_string(shelf_attached) << " ";
+    str << std::to_string(x) << " " << std::to_string(y) << " " << std::to_string(dir_rad)
+        << " " << std::to_string(shelf_attached) << " ";
   }
 };
 
@@ -117,6 +122,7 @@ class KsSimulator : public KsSimulatorApi {
   KsSimulator() = default;
   void Init(KsSchedulerApi *scheduler_p, const KsMap &ks_map);
   void Run();
+
   void AddActions(Command action_seq) override;
 
  private:

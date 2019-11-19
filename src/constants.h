@@ -10,7 +10,7 @@
 
 namespace ks {
 
-const char * const kMapFileName = "../data/map_1.map";
+const char * const kMapFilePath = "../data/map_1.map";
 
 const int kRobotCount = 1;
 
@@ -69,9 +69,10 @@ const TimePoint kEpoch = std::chrono::time_point<std::chrono::system_clock>{};
 
 // Simulator related.
 const Location kInvalidLocation = {-1, -1};
+const int kSimulatorSleepDurationMs = 100;
 
-const int kTurnDurationMs = 2000;
-const int kAttachDetachDurationMs = 3000;
+const int kTurnDurationMs = 1000;
+const int kAttachDetachDurationMs = 2000;
 const int kMoveDurationMs = 1000;
 const int kWaitDurationMs = 1000;
 // The buffer duration is at least the move duration.

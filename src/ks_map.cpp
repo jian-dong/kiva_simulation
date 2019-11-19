@@ -29,7 +29,9 @@ KsMap::KsMap(std::string file_name) {
 
   actual_x_limit_ = atoi(buffer[0].c_str());
   actual_y_limit_ = atoi(buffer[1].c_str());
-  buffer.erase(buffer.begin(), buffer.begin() + 2);
+  actual_robot_count_ = atoi(buffer[2].c_str());
+  actual_shelf_count_ = atoi(buffer[3].c_str());
+  buffer.erase(buffer.begin(), buffer.begin() + 4);
 
   for (int x = 0; x < actual_x_limit_; x++) {
     for (int y = 0; y < actual_y_limit_; y++) {

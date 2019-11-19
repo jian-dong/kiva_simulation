@@ -78,7 +78,8 @@ class KsWms : public KsWmsApi {
  public:
   KsWms(const KsMap& ks_map) :
       shelf_operation_points_(ks_map.GetShelfOperationPoints()),
-      shelf_storage_points_(ks_map.GetShelfStoragePoints()) {};
+      shelf_storage_points_(ks_map.GetShelfStoragePoints()),
+      ks_map_(ks_map) {};
   void Init(KsSchedulerApi* scheduler_p);
   // Thread 1.
   void Run();
@@ -94,6 +95,7 @@ class KsWms : public KsWmsApi {
   // Helpers.
   const WmsMission& GetPendingMission(int id);
 
+  const KsMap& ks_map_;
   // Data.
   KsSchedulerApi* scheduler_p_;
 

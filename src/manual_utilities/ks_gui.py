@@ -1,7 +1,10 @@
+from enum import Enum
+import cmath
 import redis
 import time
+import threading
 import tkinter as tk
-from enum import Enum
+
 
 # View related constants.
 CANVAS_HEIGHT = 950
@@ -13,23 +16,28 @@ SCALING_FACTOR = 10
 # Data related constants.
 X_LEN = 81
 Y_LEN = 101
+ROBOT_COUNT = 0
+SHELF_COUNT = 0
 
 # Scene related constants.
-SHELF_COUNT = 3100
-ROBOT_COUNT = 300
 ROBOT_INFO_ITEMS = 4
 SHELF_INFO_ITEMS = 2
 REDIS_KEY = "ks"
 
+################################################################################
+# Helper functions.
+
+def str2bool(v):
+    return v.lower() in ("yes", "true", "t", "1")
 
 def float_equals(a, b):
     return abs(a - b) < 0.01
-
 
 # Transfer data coordinates to canvas coordinates.
 def transfer_coordinates(x, y):
     return y * SCALING_FACTOR + CANVAS_SHIFT, x * SCALING_FACTOR + CANVAS_SHIFT
 
+################################################################################
 
 class Robot(object):
     canvas = None
@@ -39,26 +47,34 @@ class Robot(object):
     theta = 0
     has_shelf = False
 
-    body = [(4, -4), (-4, -4), (0, 4)]
+    body = [(-4, 4), (-4, -4), (4, 0)]
 
     def __init__(self, canvas):
         self.canvas = canvas
-        self.display_item = canvas.create_polygon(*(self.get_points()), fill='blue')
 
     def draw(self, x, y, theta, has_shelf):
+        if self.display_item is None:
+            self.x = x
+            self.y = y
+            self.theta = theta
+            self.has_shelf = has_shelf
+            self.display_item = self.canvas.create_polygon(*(self.get_points()), fill='cyan')
+            return
+
         if (not float_equals(self.x, x)) or (not float_equals(self.y, y)) or (not float_equals(self.theta, theta)):
             self.canvas.coords(self.display_item, *(self.get_points()))
             self.x = x
             self.y = y
             self.theta = theta
         if self.has_shelf != has_shelf:
-            color = "red" if has_shelf else "blue"
+            color = "blue" if has_shelf else "cyan"
             self.canvas.itemconfigure(self.display_item, fill=color)
             self.has_shelf = has_shelf
 
     def get_points(self):
-        offset = complex(transfer_coordinates(self.x, self.y))
-        cangle = cmath.exp(self.theta * 1j)  # theta in radians
+        offset = complex(*(transfer_coordinates(self.x, self.y)))
+        # theta in radians, need to take negation since y is flipped in the tkinter world
+        cangle = cmath.exp(- self.theta * 1j)
         new_xy = []
         for a, b in self.body:
             v = cangle * (complex(a, b)) + offset
@@ -94,6 +110,7 @@ class Grid(object):
             self.type = GridType.SHELF_OPERATION_POINT
         else:
             self.type = GridType.OTHER
+        self.update_color()
 
     def update_shelf(self, has_shelf):
         if self.has_shelf != has_shelf:
@@ -128,8 +145,8 @@ class ObjManager(object):
         self.canvas = canvas
         # Draw robots and shelfs according to a default initial configuration.
         self.grids = [[Grid(canvas) for y in range(Y_LEN)] for x in range(X_LEN)]
-        self.robots = [Robot(canvas) for x in range(ROBOT_COUNT)]
         self.load_map()
+        self.robots = [Robot(canvas) for x in range(ROBOT_COUNT)]
 
     def load_map(self):
         map_file = open("../data/map_1.map", "r")
@@ -139,9 +156,14 @@ class ObjManager(object):
             line = raw_line.strip()
             if line[0] == '#':
                 continue
-            assert (len(line) == Y_LEN)
             list_of_lines.append(line)
 
+        global ROBOT_COUNT
+        ROBOT_COUNT = int(list_of_lines[2])
+        global SHELF_COUNT
+        SHELF_COUNT = int(list_of_lines[3])
+
+        list_of_lines = list_of_lines[4:]
         assert (len(list_of_lines) == X_LEN)
 
         for x in range(X_LEN):
@@ -156,22 +178,24 @@ class ObjManager(object):
         while True:
             time.sleep(0.05)
             value = self.redis_client.get(REDIS_KEY)
-            value_array = value.split(' ')
+            if value is None:
+                continue
+            value_array = str(value, 'utf-8').split(' ')
 
             # Update robots.
             for robot_index in range(ROBOT_COUNT):
-                x = value_array[ROBOT_INFO_ITEMS * robot_index]
-                y = value_array[ROBOT_INFO_ITEMS * robot_index + 1]
-                theta = value_array[ROBOT_INFO_ITEMS * robot_index + 2]
-                has_shelf = value_array[ROBOT_INFO_ITEMS * robot_index + 3]
+                x = float(value_array[ROBOT_INFO_ITEMS * robot_index])
+                y = float(value_array[ROBOT_INFO_ITEMS * robot_index + 1])
+                theta = float(value_array[ROBOT_INFO_ITEMS * robot_index + 2])
+                has_shelf = str2bool(value_array[ROBOT_INFO_ITEMS * robot_index + 3])
                 self.robots[robot_index].draw(x, y, theta, has_shelf)
 
             # Update shelves.
             shelf_value_base = ROBOT_COUNT * ROBOT_INFO_ITEMS
             grid_with_shelf = set()
             for shelf_index in range(SHELF_COUNT):
-                x = value_array[SHELF_INFO_ITEMS * shelf_index + shelf_value_base]
-                y = value_array[SHELF_INFO_ITEMS * shelf_index + 1 + shelf_value_base]
+                x = int(value_array[SHELF_INFO_ITEMS * shelf_index + shelf_value_base])
+                y = int(value_array[SHELF_INFO_ITEMS * shelf_index + 1 + shelf_value_base])
                 grid_with_shelf.add((x, y))
 
             for x in range(X_LEN):
@@ -187,6 +211,8 @@ def main():
     canvas.pack()
 
     o = ObjManager(canvas)
+    t = threading.Thread(name='run', target=o.run)
+    t.start()
 
     root.mainloop()
 

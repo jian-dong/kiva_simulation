@@ -42,7 +42,24 @@ target_link_libraries(
     pthread
     hiredis
 )
+################################################################################
+# Mocks.
 
+# Mock scheduler, used to test the simulator(effectively an integration test).
+add_executable(
+    mock_scheduler
+
+    manual_utilities/mock_scheduler.cpp
+)
+
+target_link_libraries(
+    mock_scheduler
+
+    ks
+    pthread
+    hiredis
+)
+################################################################################
 # Tests.
 add_executable(
     sipp_test

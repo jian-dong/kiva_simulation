@@ -11,8 +11,15 @@
 # 'B' : blocked area.
 # 'R' : rest area.
 #
+# X
+# Y
+# Robot count
+# Shelf count
+# Map
 81
 101
+1
+20
 .....................................................................................................
 .PP.PP.SSSSSSSSSS.SSSSSSSSSS.SSSSSSSSSS.SSSSSSSSSS.SSSSSSSSSS.SSSSSSSSSS.SSSSSSSSSS.SSSSSSSSSS.PP.PP.
 .OP.OP.BBBBBBBBBB.BBBBBBBBBB.BBBBBBBBBB.BBBBBBBBBB.BBBBBBBBBB.BBBBBBBBBB.BBBBBBBBBB.BBBBBBBBBB.PO.PO.

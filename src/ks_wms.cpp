@@ -43,11 +43,11 @@ void KsWms::Init(KsSchedulerApi *scheduler_p) {
     storage_point_info_.emplace_back(i);
   }
 
-  shelf_info_.resize(kShelfCount);
+  shelf_info_.resize(ks_map_.actual_shelf_count_);
   mission_id_counter_ = 0;
   move_to_op_mission_count_ = 0;
 
-  for (int i = 0; i < kShelfCount; i++) {
+  for (int i = 0; i < ks_map_.actual_shelf_count_; i++) {
     storage_point_info_[i].shelf_id = i;
   }
 }

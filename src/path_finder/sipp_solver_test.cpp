@@ -47,7 +47,7 @@ TEST_F(Basic, Basic0) {
 
 
 TEST_F(Basic, Basic1) {
-  KsMap ks_map(kMapFileName);
+  KsMap ks_map(kMapFilePath);
   ShelfManager shelf_manager;
   for (int i = 0; i < 10; i++) {
     shelf_manager.AddMapping(i, {1, i + 7});
@@ -82,7 +82,7 @@ TEST_F(Basic, Basic1) {
 }
 
 TEST_F(Basic, Basic1_WmsMission_WithShelf) {
-  KsMap ks_map(kMapFileName);
+  KsMap ks_map(kMapFilePath);
   ShelfManager shelf_manager;
   for (int i = 0; i < 10; i++) {
     shelf_manager.AddMapping(i, {1, i + 7});
@@ -118,7 +118,7 @@ TEST_F(Basic, Basic1_WmsMission_WithShelf) {
 
 
 TEST_F(Basic, Basic2) {
-  KsMap ks_map(kMapFileName);
+  KsMap ks_map(kMapFilePath);
   ShelfManager shelf_manager;
   SippSolver solver(ks_map, &shelf_manager);
 
