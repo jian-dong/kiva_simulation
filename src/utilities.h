@@ -5,6 +5,8 @@
 #include <thread>
 #include <cstdlib>
 #include <cmath>
+#include <random>
+#include <algorithm>
 
 #include "common_types.h"
 
@@ -35,6 +37,14 @@ inline bool GetTrueWithProb(double a, double b) {
 // Generate a random integer between lower bound @lb and upper bound @ub.
 inline int GenRandomNumber(int lb, int ub) {
   return lb + ((double)rand() / (double)RAND_MAX) * (ub - lb);
+}
+
+template <typename T>
+inline void ShuffleVector(std::vector<T> &v) {
+  std::random_device rd;
+  std::mt19937 g(rd());
+
+  std::shuffle(v.begin(), v.end(), g);
 }
 
 inline bool ElapsedTimeLongerThanMs(TimePoint s, uint64_t duration_ms) {

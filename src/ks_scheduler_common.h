@@ -145,7 +145,8 @@ class ShelfManager {
 
   void RemoveMapping(int shelf_id, Location loc) {
     std::lock_guard<std::mutex> lock(mutex_);
-    assert(loc_to_id_.find(loc) == loc_to_id_.end());
+    assert(loc_to_id_.find(loc) != loc_to_id_.end());
+    assert(loc_to_id_[loc] == shelf_id);
     loc_to_id_.erase(loc);
   }
 
@@ -155,6 +156,7 @@ class ShelfManager {
   }
 
  private:
+  // TODO: check if we need a lock here, this structure should be used only by thread 2 in scheduler.
   std::mutex mutex_;
   std::map<Location, int> loc_to_id_;
 };

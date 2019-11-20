@@ -59,6 +59,21 @@ target_link_libraries(
     pthread
     hiredis
 )
+
+# Mock scheduler, used to test the wms(effectively an integration test).
+add_executable(
+    mock_scheduler_wms
+
+    manual_utilities/mock_scheduler_wms.cpp
+)
+
+target_link_libraries(
+    mock_scheduler_wms
+
+    ks
+    pthread
+    hiredis
+)
 ################################################################################
 # Tests.
 add_executable(

@@ -15,7 +15,7 @@ const char * const kMapFilePath = "../data/map_1.map";
 const int kRobotCount = 1;
 
 // WMS related.
-const int kPendingMoveToOperationMissionLimit = 10; // 400
+const int kPendingMoveToOperationMissionLimit = 100; // 400
 const int kMissionGenerationIntervalMs = 3000;
 const int kMinOperationTimeS = 20;
 const int kMoveOutProb = 20;
@@ -32,7 +32,7 @@ const int kXLimit = 81;
 const int kYLimit = 101;
 const int kShelfOperationPointCount = 320;
 const int kShelfStoragePointCount = 3200;
-const int kShelfCount = 100;
+//const int kShelfCount = 100;
 const int kRestAreaCount = 152;
 
 // SIPP related.

@@ -112,6 +112,7 @@ struct RobotStatus {
     y += y_modifier;
     dir_rad += dir_modifier;
 
+    // TODO: maybe remove the to_string here, just put double there should be ok, and precision can be set.
     str << std::to_string(x) << " " << std::to_string(y) << " " << std::to_string(dir_rad)
         << " " << std::to_string(shelf_attached) << " ";
   }

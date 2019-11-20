@@ -48,6 +48,12 @@ struct WmsMission {
   bool operator<(const WmsMission &o) const {
     return id < o.id;
   }
+
+  std::string to_string() {
+    return "from: " + pick_from.loc.to_string() +
+        " to: " + drop_to.loc.to_string() +
+        " shelf id: " + std::to_string(shelf_id);
+  }
 };
 }
 #endif
