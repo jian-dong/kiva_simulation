@@ -3,6 +3,8 @@
 
 #include <mutex>
 
+#include <iostream>
+
 #include "constants.h"
 #include "utilities.h"
 #include "interface/wms_scheduler_types.h"
@@ -26,6 +28,7 @@ struct Position {
   Direction dir;
 
   Position() = default;
+  Position(int x, int y, Direction dir) : loc(x, y), dir(dir) {};
   Position(Location loc, Direction dir) : loc(loc), dir(dir) {};
 
   bool operator<(const Position &o) const {
@@ -43,7 +46,7 @@ struct Position {
     return !operator==(o);
   }
 
-  std::string to_string() {
+  std::string to_string() const {
     return loc.to_string() + " " + kDirectionToString.at(dir);
   }
 };
@@ -73,6 +76,10 @@ struct RobotInfo {
       assert(!shelf_attached);
     }
     return rtn;
+  }
+
+  std::string to_string() const {
+    return pos.to_string();
   }
 };
 
@@ -119,10 +126,13 @@ struct ActionWithTime {
   Action action;
   int start_time_ms;
   int end_time_ms;
+  Position start_pos;
+  Position end_pos;
 
   ActionWithTime() = default;
-  ActionWithTime(Action action, int start_time_ms, int end_time_ms)
-      : action(action), start_time_ms(start_time_ms), end_time_ms(end_time_ms) {};
+  ActionWithTime(Action action, int start_time_ms, int end_time_ms, Position start_pos, Position end_pos)
+      : action(action), start_time_ms(start_time_ms), end_time_ms(end_time_ms),
+        start_pos(start_pos), end_pos(end_pos) {};
 
   std::string to_string() const {
     return kActionToString.at(action)
@@ -136,28 +146,26 @@ using ActionWithTimeSeq = std::vector<ActionWithTime>;
 class ShelfManager {
  public:
   ShelfManager() = default;
+  ShelfManager(const ShelfManager& o) {
+    loc_to_id_ = o.loc_to_id_;
+  }
 
   void AddMapping(int shelf_id, Location loc) {
-    std::lock_guard<std::mutex> lock(mutex_);
     assert(loc_to_id_.find(loc) == loc_to_id_.end());
     loc_to_id_[loc] = shelf_id;
   }
 
   void RemoveMapping(int shelf_id, Location loc) {
-    std::lock_guard<std::mutex> lock(mutex_);
+    std::cout << "shelf id: " << shelf_id << " location: " << loc.to_string() << std::endl;
     assert(loc_to_id_.find(loc) != loc_to_id_.end());
     assert(loc_to_id_[loc] == shelf_id);
     loc_to_id_.erase(loc);
   }
 
   bool HasShelf(Location loc) {
-    std::lock_guard<std::mutex> lock(mutex_);
     return loc_to_id_.find(loc) != loc_to_id_.end();
   }
 
- private:
-  // TODO: check if we need a lock here, this structure should be used only by thread 2 in scheduler.
-  std::mutex mutex_;
   std::map<Location, int> loc_to_id_;
 };
 

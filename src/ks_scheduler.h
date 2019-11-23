@@ -16,7 +16,9 @@
 namespace ks {
 class KsScheduler : public KsSchedulerApi {
  public:
-  KsScheduler(const KsMap& ks_map) : map_(ks_map), robot_manager_(ks_map) {};
+  KsScheduler(const KsMap& ks_map) : ks_map_(ks_map), robot_manager_(ks_map),
+                                     robot_count_(ks_map.actual_robot_count_),
+                                     action_graph_(ks_map.actual_robot_count_) {};
   void Init(KsWmsApi *wms_p, KsSimulatorApi *simulator_p);
 
   // Thread 1, handle mission assignments, replan and generate the action dependency graph.
@@ -32,19 +34,17 @@ class KsScheduler : public KsSchedulerApi {
 
  private:
 
-  const KsMap& map_;
+  const int robot_count_;
+  const KsMap& ks_map_;
   KsWmsApi* wms_p_;
   KsSimulatorApi* simulator_p_;
 
-  // This structure is only accessed by thread 2, used as a cache, so no need to lock.
-  std::vector<MissionReport> mq_to_wms_;
-
   std::mutex mutex_io_up_;
-  std::set<WmsMission> missions_to_assign_;
+  std::set<WmsMission> missions_from_wms_;
 
   std::mutex mutex_io_down_;
   // Contains actions that robots had finished.
-  std::queue<CommandReport> robot_report_;
+  std::queue<CommandReport> robot_reports_;
 
   std::mutex mutex_;
   // Maintain robot status and the action dependency graph, the two data structures below should
@@ -54,7 +54,6 @@ class KsScheduler : public KsSchedulerApi {
   ShelfManager shelf_manager_;
   SippSolver* sipp_p_;
 };
-
 }
 
 #endif

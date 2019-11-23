@@ -85,7 +85,7 @@ class IntervalSeq {
     SanityCheck();
   }
 
-  int GetIntervalIndex(int time_ms) {
+  int GetIntervalIndex(int time_ms) const {
     for (int i = 0; i < intervals_.size(); i++) {
       if (intervals_[i].Includes(time_ms)) {
         return i;
@@ -136,9 +136,9 @@ struct PfResponse {
 
 class SippSolver {
  public:
-  SippSolver(const KsMap &ks_map, ShelfManager* shelf_manager)
-      : map_(ks_map), shelf_manager_(shelf_manager) {};
-  PfResponse FindPath(const PfRequest &req);
+  SippSolver(const KsMap &ks_map)
+      : map_(ks_map) {};
+  PfResponse FindPath(const PfRequest &req, ShelfManager *shelf_manager_p);
 
  private:
   void PlanInternalMission(const RobotInfo &robot, ActionWithTimeSeq *rtn);
@@ -146,9 +146,9 @@ class SippSolver {
   void UpdateSafeIntervalsWithActions(int start_time_ms, Position pos, const ActionWithTimeSeq &seq);
 
   const KsMap &map_;
-  ShelfManager* shelf_manager_;
   std::map<Location, IntervalSeq> safe_intervals_;
   int robot_count_;
+  ShelfManager* shelf_manager_p_;
 };
 
 }

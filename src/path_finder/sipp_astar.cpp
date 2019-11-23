@@ -11,16 +11,19 @@ namespace sipp_astar {
 using namespace std;
 
 ActionWithTimeSeq SippAstar::GetActions(int start_time_ms,
-                                        bool has_shelf,
-                                        Position pos,
-                                        Location dest) {
+                                        const bool has_shelf,
+                                        const Position pos,
+                                        const Location dest) {
   has_shelf_ = has_shelf;
   dest_ = dest;
-  src_ = {pos, 0, 0};
-  State start(pos, start_time_ms, 0, 0, GetHeuristicMs(pos.loc, dest_));
+  int start_safe_interval_index = safe_intervals_.at(pos.loc).GetIntervalIndex(start_time_ms);
+  src_ = {pos, start_time_ms, start_safe_interval_index};
+  State start(pos, start_time_ms, start_safe_interval_index, 0, GetHeuristicMs(pos.loc, dest_));
   open_.push(start);
 
   State cur_state;
+
+//  cout << "from: " << pos.to_string() << " to: " << dest_.to_string() << endl;
 
   while (!open_.empty()) {
     cur_state = open_.top();
@@ -38,9 +41,9 @@ ActionWithTimeSeq SippAstar::GetActions(int start_time_ms,
     closed_.insert(cur_state.stp);
 
     vector<pair<State, ActionWithTime>> successors = GenSuccessors(cur_state);
-    for (const pair<State, ActionWithTime> & successor : successors) {
-      const State& new_state = successor.first;
-      const ActionWithTime& action_to_new_state = successor.second;
+    for (const pair<State, ActionWithTime> &successor : successors) {
+      const State &new_state = successor.first;
+      const ActionWithTime &action_to_new_state = successor.second;
 
       if (closed_.find(new_state.stp) != closed_.end()) {
         continue;
@@ -54,12 +57,13 @@ ActionWithTimeSeq SippAstar::GetActions(int start_time_ms,
       }
       g_value_[new_state.stp] = tmp_g_value;
 
-      prev_[new_state.stp] = {action_to_new_state , cur_state.stp};
+      prev_[new_state.stp] = {action_to_new_state, cur_state.stp};
       open_.push(new_state);
     }
   }
 
-  return ActionWithTimeSeq();
+  LogFatal("Cannof find a path. from: " + pos.to_string() + " to: " + dest.to_string()
+               + " with shelf: " + to_string(has_shelf));
 }
 
 int SippAstar::GetHeuristicMs(Location a, Location b) {
@@ -75,7 +79,7 @@ std::vector<std::pair<State, ActionWithTime>> SippAstar::GenSuccessors(const Sta
     if (!map_.IsLocationPassable(new_pos.loc)) {
       continue;
     }
-    if (has_shelf_ && shelf_manager_->HasShelf(new_pos.loc)) {
+    if (has_shelf_ && shelf_manager_p_->HasShelf(new_pos.loc)) {
       continue;
     }
     int action_duration = GetActionCostInTime(a);
@@ -85,7 +89,7 @@ std::vector<std::pair<State, ActionWithTime>> SippAstar::GenSuccessors(const Sta
         + action_duration;
     assert(arrival_time_start < arrival_time_end);
     for (int i = 0; i < safe_intervals_.at(new_pos.loc).Size(); i++) {
-      const Interval& interval = safe_intervals_.at(new_pos.loc).Get(i);
+      const Interval &interval = safe_intervals_.at(new_pos.loc).Get(i);
       if (!interval.Intersects(arrival_time_start, arrival_time_end)) {
         continue;
       }
@@ -95,7 +99,11 @@ std::vector<std::pair<State, ActionWithTime>> SippAstar::GenSuccessors(const Sta
       }
 
       State new_state(new_pos, arrival_time, i, arrival_time, GetHeuristicMs(new_pos.loc, dest_));
-      rtn.push_back(make_pair(new_state, ActionWithTime(a, arrival_time - action_duration, arrival_time)));
+      rtn.push_back(make_pair(new_state,
+                              ActionWithTime(a,
+                                             arrival_time - action_duration, arrival_time,
+                                             cur_state.stp.pos,
+                                             new_pos)));
     }
   }
   return rtn;
@@ -105,7 +113,8 @@ ActionWithTimeSeq SippAstar::GenActionSeq(State cur_state) {
   ActionWithTimeSeq rtn;
   SpatioTemporalPoint stp = cur_state.stp;
   while (stp != src_) {
-    const auto& prev = prev_[stp];
+    const auto &prev = prev_[stp];
+//    cout << "pushed action with time: " << prev.action_with_time.to_string() << endl;
     rtn.push_back(prev.action_with_time);
     stp = prev.stp;
   }

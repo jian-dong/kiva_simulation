@@ -21,8 +21,8 @@ const int kMinOperationTimeS = 20;
 const int kMoveOutProb = 20;
 
 // Scheduler related.
-const int kScheduleIntervalMs = 1000;
-const int kUpdateIntervalMs = 100;
+const int kScheduleIntervalMs = 4000;
+const int kUpdateIntervalMs = 300;
 
 // Map related.
 const char kShelfOperationPoint = 'P';

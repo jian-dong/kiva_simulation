@@ -38,7 +38,7 @@ struct Location {
     }
   }
 
-  std::string to_string() {
+  std::string to_string() const {
     return std::to_string(x) + " " + std::to_string(y);
   }
 };

@@ -47,13 +47,13 @@ target_link_libraries(
 
 # Mock scheduler, used to test the simulator(effectively an integration test).
 add_executable(
-    mock_scheduler
+    gui_manual_test
 
-    manual_utilities/mock_scheduler.cpp
+    manual_utilities/gui_manual_test.cpp
 )
 
 target_link_libraries(
-    mock_scheduler
+    gui_manual_test
 
     ks
     pthread
@@ -62,13 +62,13 @@ target_link_libraries(
 
 # Mock scheduler, used to test the wms(effectively an integration test).
 add_executable(
-    mock_scheduler_wms
+    wms_manual_test
 
-    manual_utilities/mock_scheduler_wms.cpp
+    manual_utilities/wms_manual_test.cpp
 )
 
 target_link_libraries(
-    mock_scheduler_wms
+    wms_manual_test
 
     ks
     pthread
@@ -94,13 +94,13 @@ target_link_libraries(
 )
 
 add_executable(
-    wms_test
+    actiongraph_test
 
-    ks_wms_test.cpp
+    ks_actiongraph_test.cpp
 )
 
 target_link_libraries(
-    wms_test
+    actiongraph_test
 
     ks
     gmock

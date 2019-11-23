@@ -83,11 +83,11 @@ class SippAstar {
  public:
   SippAstar(const KsMap &ks_map,
             const std::map<Location, IntervalSeq> &safe_intervals,
-            ShelfManager *shelf_manager)
-      : map_(ks_map), safe_intervals_(safe_intervals), shelf_manager_(shelf_manager) {};
+            ShelfManager *shelf_manager_p)
+      : map_(ks_map), safe_intervals_(safe_intervals), shelf_manager_p_(shelf_manager_p) {};
 
   // Return a sequence of actions to move the robot from src to dest.
-  ActionWithTimeSeq GetActions(int start_time_ms, bool has_shelf, Position pos, Location dest);
+  ActionWithTimeSeq GetActions(int start_time_ms, const bool has_shelf, const Position pos, const Location dest);
  private:
   // Return the heuristic(in milliseconds) from source to destination.
   int GetHeuristicMs(Location a, Location b);
@@ -97,7 +97,7 @@ class SippAstar {
   Interval GetSafeInterval(SpatioTemporalPoint stp);
 
   const KsMap &map_;
-  ShelfManager *shelf_manager_;
+  ShelfManager *shelf_manager_p_;
   const std::map<Location, IntervalSeq> &safe_intervals_;
 
   std::set<SpatioTemporalPoint> closed_;

@@ -4,20 +4,6 @@
 #include "common_types.h"
 
 namespace ks {
-// Scheduler to WMS.
-enum class MissionReportType {
-  PICKUP_DONE = 0,
-  MISSION_DONE = 1,
-};
-
-struct MissionReport {
-  int mission_id;
-  MissionReportType type;
-
-  MissionReport(int mission_id, MissionReportType type)
-      : mission_id(mission_id), type(type) {};
-};
-
 // WMS to scheduler.
 enum class LocationType : int {
   STORAGE_POINT = 0,
@@ -55,5 +41,20 @@ struct WmsMission {
         " shelf id: " + std::to_string(shelf_id);
   }
 };
+
+// Scheduler to WMS.
+enum class MissionReportType {
+  PICKUP_DONE = 0,
+  MISSION_DONE = 1,
+};
+
+struct MissionReport {
+  WmsMission mission;
+  MissionReportType type;
+
+  MissionReport(WmsMission mission, MissionReportType type)
+      : mission(mission), type(type) {};
+};
+
 }
 #endif

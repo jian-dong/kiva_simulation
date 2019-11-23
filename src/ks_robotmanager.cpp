@@ -10,8 +10,7 @@ namespace ks {
 
 using namespace std;
 
-void KsRobotManager::Init(KsWmsApi *wms_p) {
-  wms_p_ = wms_p;
+void KsRobotManager::Init() {
   const vector<Location> &shelf_storage_points = map_.GetShelfStoragePoints();
   for (int i = 0; i < kRobotCount; i++) {
     robot_info_.emplace_back(i, shelf_storage_points[i]);
@@ -39,9 +38,9 @@ std::optional<MissionReport> KsRobotManager::UpdateRobotStatus(int robot_id, Act
 
   ApplyActionOnRobot(a, &robot);
   if (a == Action::ATTACH) {
-    return MissionReport(robot.mission.wms_mission.id, MissionReportType::PICKUP_DONE);
+    return MissionReport(robot.mission.wms_mission, MissionReportType::PICKUP_DONE);
   } else if (a == Action::DETACH) {
-    return MissionReport(robot.mission.wms_mission.id, MissionReportType::MISSION_DONE);
+    return MissionReport(robot.mission.wms_mission, MissionReportType::MISSION_DONE);
   } else {
     return nullopt;
   }

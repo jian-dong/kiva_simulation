@@ -15,11 +15,11 @@ namespace ks {
 class KsRobotManager {
  public:
   KsRobotManager(const KsMap &ks_map) : map_(ks_map), rest_areas_(ks_map.GetRestAreas()) {};
-  void Init(KsWmsApi *wms_p);
+  void Init();
 
   void AssignMissions(std::set<WmsMission> &missions);
   std::optional<MissionReport> UpdateRobotStatus(int robot_id, Action a);
-  const std::vector<RobotInfo>& GetRobotInfo() { return robot_info_; };
+  const std::vector<RobotInfo>& GetRobotInfo() const { return robot_info_; };
 
  private:
   // Helper functions.
@@ -34,7 +34,6 @@ class KsRobotManager {
   const KsMap &map_;
   const std::vector<Location>& rest_areas_;
   std::vector<int> rest_area_assignment_;
-  KsWmsApi *wms_p_;
 
   // Data.
   std::vector<RobotInfo> robot_info_;

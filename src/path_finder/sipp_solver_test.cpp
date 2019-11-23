@@ -27,7 +27,7 @@ class Basic : public ::testing::Test {
 TEST_F(Basic, Basic0) {
   KsMap ks_map("../data/test_map_1.map");
   ShelfManager shelf_manager;
-  SippSolver solver(ks_map, &shelf_manager);
+  SippSolver solver(ks_map);
 
   RobotInfo robot(0, {0, 0});
   robot.has_mission = true;
@@ -35,7 +35,7 @@ TEST_F(Basic, Basic0) {
   robot.mission.internal_mission.to = {0, 10};
   PfRequest req;
   req.robots.push_back(robot);
-  PfResponse resp = solver.FindPath(req);
+  PfResponse resp = solver.FindPath(req, &shelf_manager);
 
   for (ActionWithTimeSeq ac : resp.plan) {
     for (ActionWithTime a : ac) {
@@ -52,7 +52,7 @@ TEST_F(Basic, Basic1) {
   for (int i = 0; i < 10; i++) {
     shelf_manager.AddMapping(i, {1, i + 7});
   }
-  SippSolver solver(ks_map, &shelf_manager);
+  SippSolver solver(ks_map);
 
   RobotInfo robot0(0, {0, 0});
   robot0.has_mission = true;
@@ -68,7 +68,7 @@ TEST_F(Basic, Basic1) {
   PfRequest req;
   req.robots.push_back(robot0);
   req.robots.push_back(robot1);
-  PfResponse resp = solver.FindPath(req);
+  PfResponse resp = solver.FindPath(req, &shelf_manager);
 
   for (int i = 0; i < resp.plan.size(); i++) {
     ActionWithTimeSeq &ac = resp.plan[i];
@@ -87,7 +87,7 @@ TEST_F(Basic, Basic1_WmsMission_WithShelf) {
   for (int i = 0; i < 10; i++) {
     shelf_manager.AddMapping(i, {1, i + 7});
   }
-  SippSolver solver(ks_map, &shelf_manager);
+  SippSolver solver(ks_map);
 
   RobotInfo robot0(0, {0, 0});
   robot0.has_mission = true;
@@ -103,7 +103,7 @@ TEST_F(Basic, Basic1_WmsMission_WithShelf) {
   PfRequest req;
   req.robots.push_back(robot0);
   req.robots.push_back(robot1);
-  PfResponse resp = solver.FindPath(req);
+  PfResponse resp = solver.FindPath(req, &shelf_manager);
 
   for (int i = 0; i < resp.plan.size(); i++) {
     ActionWithTimeSeq &ac = resp.plan[i];
@@ -120,7 +120,7 @@ TEST_F(Basic, Basic1_WmsMission_WithShelf) {
 TEST_F(Basic, Basic2) {
   KsMap ks_map(kMapFilePath);
   ShelfManager shelf_manager;
-  SippSolver solver(ks_map, &shelf_manager);
+  SippSolver solver(ks_map);
 
   RobotInfo robot0(0, {0, 0});
   robot0.pos.dir = Direction::EAST;
@@ -136,7 +136,7 @@ TEST_F(Basic, Basic2) {
   PfRequest req;
   req.robots.push_back(robot0);
   req.robots.push_back(robot1);
-  PfResponse resp = solver.FindPath(req);
+  PfResponse resp = solver.FindPath(req, &shelf_manager);
 
   for (int i = 0; i < resp.plan.size(); i++) {
     ActionWithTimeSeq &ac = resp.plan[i];

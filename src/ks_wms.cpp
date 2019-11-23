@@ -146,6 +146,7 @@ const WmsMission &KsWms::GetPendingMission(int id) {
 
 void KsWms::ReportMissionStatus(MissionReport r) {
   lock_guard<mutex> lock(mutex_io_);
+//  cout << "Mission :" << r.mission.id << " done." << endl;
   message_queue_.push(r);
 }
 
@@ -161,7 +162,7 @@ void KsWms::ProcessReports() {
   while (!tmp_mq.empty()) {
     MissionReport report = tmp_mq.front();
     tmp_mq.pop();
-    const WmsMission &m = GetPendingMission(report.mission_id);
+    const WmsMission &m = GetPendingMission(report.mission.id);
     if (report.type == MissionReportType::PICKUP_DONE) {
       if (m.pick_from.type == LocationType::STORAGE_POINT) {
         assert(storage_point_info_[m.pick_from.index].shelf_id != -1);
@@ -188,7 +189,7 @@ void KsWms::ProcessReports() {
       } else {
         exit(0);
       }
-      assert(pending_missions_.erase({report.mission_id}) == 1);
+      assert(pending_missions_.erase({report.mission.id}) == 1);
     } else {
       exit(0);
     }

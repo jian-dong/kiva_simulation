@@ -95,7 +95,7 @@ struct RobotStatus {
     if (!pending_actions.empty()) {
       const ActionProgress& p = pending_actions.front();
       double progress = p.GetProgress(cur_time);
-      std::cout << "current progress: " << DoubleToString(progress) << std::endl;
+//      std::cout << "current progress: " << DoubleToString(progress) << std::endl;
       if (p.action == Action::MOVE) {
         const auto& delta = kDirectionToDelta.at(dir);
         x_modifier = delta.first * progress;
