@@ -1,0 +1,27 @@
+#
+# Generate map in an (imaginary) Kiva setting.
+#
+# The map is 81 * 101, with 80 operation positions, 320 shelf operation point, 80 temporary
+# storage point, 160 shelf groups(20 * 8), 3200 shelf spaces, 152 rest areas.
+# '.' : empty.
+# 'O' : operation position.
+# 'P' : shelf operation point.
+# 'T' : temporary storage point.
+# 'S' : shelf storage point.
+# 'B' : blocked area.
+# 'R' : rest area.
+#
+# X_LIMIT
+# Y_LIMIT
+# Robot count
+# Shelf count
+# Map
+5
+46
+5
+30
+..............................................
+.PP.PP.SSSSSSSSSS.SSSSSSSSSS.SSSSSSSSSS.PP.PP.
+.OP.OP.BBBBBBBBBB.BBBBBBBBBB.BBBBBBBBBB.PO.PO.
+.RP.RP.SSSSSSSSSS.SSSSSSSSSS.SSSSSSSSSS.RP.RP.
+..............................................

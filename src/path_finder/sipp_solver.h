@@ -19,18 +19,26 @@ class ShelfManager;
 struct Interval {
   int start_ms;
   int end_ms;
-  Interval(int start_ms, int end_ms) : start_ms(start_ms), end_ms(end_ms) {};
+  Interval(int start_ms, int end_ms) : start_ms(start_ms), end_ms(end_ms) {
+    assert(start_ms < end_ms);
+  };
 
   bool Includes(int time_ms) const {
-    return time_ms >= start_ms && time_ms <= end_ms;
+    return start_ms <= time_ms
+        && time_ms < end_ms;
   }
 
-  bool Intersects(int o_start_ms, int o_end_ms) const {
-    return (start_ms < o_start_ms && o_start_ms < end_ms) || (start_ms < o_end_ms && o_end_ms < end_ms);
+  bool DoesNotIntersect(int o_start_ms, int o_end_ms) const {
+    if (o_end_ms <= start_ms) {
+      return true;
+    }
+    if (o_start_ms >= end_ms) {
+      return true;
+    }
+    return false;
   }
 
   int Length() {
-    assert(end_ms >= start_ms);
     return end_ms - start_ms;
   }
 
@@ -39,7 +47,7 @@ struct Interval {
   }
 
   std::string to_string() {
-    return std::to_string(start_ms) + "->" + (end_ms >= kIntInf ? "INF" : std::to_string(end_ms));
+    return std::to_string(start_ms) + "->" + (end_ms >= (kIntInf / 2) ? "INF" : std::to_string(end_ms));
   }
 };
 
@@ -60,14 +68,16 @@ class IntervalSeq {
     int index = GetIntervalIndex(start_ms);
     Interval tmp = intervals_[index];
     intervals_.erase(intervals_.begin() + index);
-    Interval tmp_1 = Interval(tmp.start_ms, start_ms);
-    Interval tmp_2 = Interval(end_ms, tmp.end_ms);
-    if (tmp_1.Length() > 2 * kBufferDurationMs) {
+    if (tmp.start_ms < start_ms) {
+      Interval tmp_1 = Interval(tmp.start_ms, start_ms);
       intervals_.push_back(tmp_1);
     }
-    if (tmp_2.Length() > 2 * kBufferDurationMs) {
+
+    if (end_ms < tmp.end_ms) {
+      Interval tmp_2 = Interval(end_ms, tmp.end_ms);
       intervals_.push_back(tmp_2);
     }
+
     std::sort(intervals_.begin(), intervals_.end());
     SanityCheck();
   }
@@ -77,9 +87,8 @@ class IntervalSeq {
     int index = GetIntervalIndex(start_ms);
     Interval tmp = intervals_[index];
     intervals_.erase(intervals_.begin() + index, intervals_.end());
-
-    Interval last = Interval(tmp.start_ms, start_ms);
-    if (last.Length() > 2 * kBufferDurationMs) {
+    if (tmp.start_ms < start_ms) {
+      Interval last = Interval(tmp.start_ms, start_ms);
       intervals_.push_back(last);
     }
     SanityCheck();

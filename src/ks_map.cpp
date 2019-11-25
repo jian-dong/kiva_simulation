@@ -4,8 +4,6 @@
 #include <iostream>
 #include <vector>
 
-#include "logger.h"
-
 namespace ks {
 using namespace std;
 
@@ -29,8 +27,8 @@ KsMap::KsMap(std::string file_name) {
 
   actual_x_limit_ = atoi(buffer[0].c_str());
   actual_y_limit_ = atoi(buffer[1].c_str());
-  actual_robot_count_ = atoi(buffer[2].c_str());
-  actual_shelf_count_ = atoi(buffer[3].c_str());
+  robot_count_ = atoi(buffer[2].c_str());
+  shelf_count_ = atoi(buffer[3].c_str());
   buffer.erase(buffer.begin(), buffer.begin() + 4);
 
   for (int x = 0; x < actual_x_limit_; x++) {
@@ -51,6 +49,9 @@ KsMap::KsMap(std::string file_name) {
       }
     }
   }
+  rest_area_count_ = rest_area_.size();
+  operation_point_count_ = sops_.size();
+  storage_point_count_ = ssps_.size();
 }
 
 const std::vector<Location> &KsMap::GetShelfOperationPoints() const {

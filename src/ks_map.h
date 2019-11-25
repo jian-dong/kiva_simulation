@@ -18,8 +18,11 @@ class KsMap {
   const std::vector<Location>& GetRestAreas() const;
   bool IsLocationPassable(const Location& loc) const;
 
-  int actual_robot_count_;
-  int actual_shelf_count_;
+  int robot_count_;
+  int shelf_count_;
+  int rest_area_count_;
+  int operation_point_count_;
+  int storage_point_count_;
 
  private:
   char map_[kXLimit][kYLimit];

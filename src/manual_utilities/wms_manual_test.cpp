@@ -82,7 +82,7 @@ void MockScheduler::Init(KsWmsApi *wms) {
   const std::vector<Location>& shelf_storage_points = ks_map_.GetShelfStoragePoints();
 
   // The way shelves are initialized.
-  for (int i = 0; i < ks_map_.actual_shelf_count_; i++) {
+  for (int i = 0; i < ks_map_.shelf_count_; i++) {
     shelf_manager_.AddMapping(i, shelf_storage_points[i]);
   }
 }

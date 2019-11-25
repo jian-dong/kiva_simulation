@@ -83,6 +83,7 @@ struct RobotInfo {
   }
 };
 
+// TODO: think if the shelf manager can be updated here.
 inline void ApplyActionOnRobot(Action a, RobotInfo *r) {
   switch (a) {
     case Action::ATTACH:assert(r->shelf_attached == false);
@@ -151,12 +152,13 @@ class ShelfManager {
   }
 
   void AddMapping(int shelf_id, Location loc) {
+//    std::cout << "Add mapping: shelf id: " << shelf_id << " location: " << loc.to_string() << std::endl;
     assert(loc_to_id_.find(loc) == loc_to_id_.end());
     loc_to_id_[loc] = shelf_id;
   }
 
   void RemoveMapping(int shelf_id, Location loc) {
-    std::cout << "shelf id: " << shelf_id << " location: " << loc.to_string() << std::endl;
+//    std::cout << "Remove mapping: shelf id: " << shelf_id << " location: " << loc.to_string() << std::endl;
     assert(loc_to_id_.find(loc) != loc_to_id_.end());
     assert(loc_to_id_[loc] == shelf_id);
     loc_to_id_.erase(loc);

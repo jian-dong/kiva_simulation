@@ -101,7 +101,9 @@ TEST_F(Basic, Cut) {
   robot_info.emplace_back(1, Location(0, 0));
   robot_info[0].pos = {0, 1, Direction::EAST};
   robot_info[1].pos = {1, 1, Direction::NORTH};
-  ag.Cut(robot_info);
+
+  ShelfManager sm;
+  ag.Cut(robot_info, sm);
   PrintRobotInfo(robot_info);
   vector<ActionWithTimeSeq> new_plan(robot_count);
   new_plan[1].push_back({Action::MOVE,

@@ -16,6 +16,7 @@ void AppendToVector(const vector<T> &from, vector<T> *to) {
 }
 
 PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manager_p) {
+//  cout << "called find path" << endl;
   // 1. Initialize all safe intervals, for robots with no mission, the location they stay is always non-safe.
   shelf_manager_p_ = shelf_manager_p;
   robot_count_ = req.robots.size();
@@ -34,8 +35,10 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
   PfResponse rtn;
   rtn.plan.resize(robot_count_);
   for (int robot_id = 0; robot_id < robot_count_; robot_id++) {
+    cout << "Planning for robot: " << robot_id << endl;
     const RobotInfo &robot = req.robots[robot_id];
     if (!robot.has_mission) {
+      cout << "robot has no mission" << endl;
       continue;
     }
 
@@ -50,6 +53,7 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
 }
 
 void SippSolver::PlanInternalMission(const RobotInfo &robot, ActionWithTimeSeq *rtn) {
+  cout << "from: " << robot.pos.loc.to_string() << " to: " << robot.mission.internal_mission.to.to_string();
   SippAstar astar(map_, safe_intervals_, shelf_manager_p_);
   const auto &new_actions = astar.GetActions(0, false, robot.pos,
                                              robot.mission.internal_mission.to);
@@ -58,38 +62,57 @@ void SippSolver::PlanInternalMission(const RobotInfo &robot, ActionWithTimeSeq *
 }
 
 void SippSolver::PlanWmsMission(const RobotInfo &robot, ActionWithTimeSeq *rtn) {
+  cout << "from: " << robot.pos.loc.to_string()
+      << " via: " << robot.mission.wms_mission.pick_from.loc.to_string()
+      << " to: " << robot.mission.wms_mission.drop_to.loc.to_string()
+      << endl;
   // Plan for the first half.
-  int second_half_start_time_ms = 0;
-  RobotInfo tmp_robot = robot;
+  int end_time = 0;
+  Position end_pos = robot.pos;
+
   if (!robot.shelf_attached) {
     SippAstar astar(map_, safe_intervals_, shelf_manager_p_);
     ActionWithTimeSeq new_actions = astar.GetActions(0, false, robot.pos,
                                                      robot.mission.wms_mission.pick_from.loc);
     if (!new_actions.empty()) {
-      second_half_start_time_ms = new_actions.back().end_time_ms;
-    }
-    for (const ActionWithTime &e : new_actions) {
-      ApplyActionOnRobot(e.action, &tmp_robot);
+      end_time = new_actions.back().end_time_ms;
+      end_pos = new_actions.back().end_pos;
     }
 
     new_actions.push_back({Action::ATTACH,
-                           second_half_start_time_ms,
-                           second_half_start_time_ms + GetActionCostInTime(Action::ATTACH),
-                           tmp_robot.pos,
-                           tmp_robot.pos});
+                           end_time,
+                           end_time + GetActionCostInTime(Action::ATTACH),
+                           end_pos,
+                           end_pos});
+    end_time = end_time + GetActionCostInTime(Action::ATTACH);
+
     AppendToVector(new_actions, rtn);
     shelf_manager_p_->RemoveMapping(robot.mission.wms_mission.shelf_id,
-                                  robot.mission.wms_mission.pick_from.loc);
+                                    robot.mission.wms_mission.pick_from.loc);
   }
 
   // Plan for the second half.
   SippAstar astar(map_, safe_intervals_, shelf_manager_p_);
-  const auto &new_actions = astar.GetActions(second_half_start_time_ms,
-                                             true,
-                                             tmp_robot.pos,
-                                             robot.mission.wms_mission.drop_to.loc);
-  AppendToVector(new_actions, rtn);
+  ActionWithTimeSeq new_actions_1 = astar.GetActions(end_time,
+                                                     true,
+                                                     end_pos,
+                                                     robot.mission.wms_mission.drop_to.loc);
+
+  end_time = new_actions_1.back().end_time_ms;
+  end_pos = new_actions_1.back().end_pos;
+
+  new_actions_1.push_back({Action::DETACH,
+                           end_time,
+                           end_time + GetActionCostInTime(Action::DETACH),
+                           end_pos,
+                           end_pos});
+  shelf_manager_p_->AddMapping(robot.mission.wms_mission.shelf_id,
+                               robot.mission.wms_mission.drop_to.loc);
+
+  AppendToVector(new_actions_1, rtn);
   UpdateSafeIntervalsWithActions(0, robot.pos, *rtn);
+
+//  cout << "Finished update safe intervals" << endl;
 }
 
 void SippSolver::UpdateSafeIntervalsWithActions(int start_time_ms, Position pos, const ActionWithTimeSeq &seq) {
@@ -104,7 +127,7 @@ void SippSolver::UpdateSafeIntervalsWithActions(int start_time_ms, Position pos,
     int prev_interval_end_ms = awt.start_time_ms + kBufferDurationMs;
     safe_intervals_.at(pos.loc).RemoveInterval(start_time_ms, prev_interval_end_ms);
     pos = ApplyActionOnPosition(awt.action, pos);
-    start_time_ms = awt.end_time_ms - kBufferDurationMs;
+    start_time_ms = awt.end_time_ms;
   }
 
 //  cout << "last position: " << pos.to_string() << endl;

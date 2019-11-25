@@ -33,13 +33,13 @@ void KsSimulator::Init(KsSchedulerApi *scheduler_p, const KsMap &ks_map) {
   scheduler_p_ = scheduler_p;
 
   const vector<Location> &shelf_storage_points = ks_map.GetShelfStoragePoints();
-  for (int i = 0; i < ks_map.actual_robot_count_; i++) {
+  for (int i = 0; i < ks_map.robot_count_; i++) {
     robot_status_.emplace_back(i, shelf_storage_points[i]);
   }
 
-  shelf_id_to_loc_.resize(ks_map.actual_shelf_count_);
+  shelf_id_to_loc_.resize(ks_map.shelf_count_);
   loc_to_shelf_id_.clear();
-  for (int i = 0; i < ks_map.actual_shelf_count_; i++) {
+  for (int i = 0; i < ks_map.shelf_count_; i++) {
     shelf_id_to_loc_[i] = ks_map.GetShelfStoragePoints()[i];
     loc_to_shelf_id_[ks_map.GetShelfStoragePoints()[i]] = i;
   }

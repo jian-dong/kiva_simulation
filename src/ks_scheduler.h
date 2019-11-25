@@ -17,8 +17,8 @@ namespace ks {
 class KsScheduler : public KsSchedulerApi {
  public:
   KsScheduler(const KsMap& ks_map) : ks_map_(ks_map), robot_manager_(ks_map),
-                                     robot_count_(ks_map.actual_robot_count_),
-                                     action_graph_(ks_map.actual_robot_count_) {};
+                                     robot_count_(ks_map.robot_count_),
+                                     action_graph_(ks_map.robot_count_) {};
   void Init(KsWmsApi *wms_p, KsSimulatorApi *simulator_p);
 
   // Thread 1, handle mission assignments, replan and generate the action dependency graph.

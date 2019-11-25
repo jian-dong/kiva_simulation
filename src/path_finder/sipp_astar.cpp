@@ -90,10 +90,10 @@ std::vector<std::pair<State, ActionWithTime>> SippAstar::GenSuccessors(const Sta
     assert(arrival_time_start < arrival_time_end);
     for (int i = 0; i < safe_intervals_.at(new_pos.loc).Size(); i++) {
       const Interval &interval = safe_intervals_.at(new_pos.loc).Get(i);
-      if (!interval.Intersects(arrival_time_start, arrival_time_end)) {
+      if (interval.DoesNotIntersect(arrival_time_start, arrival_time_end)) {
         continue;
       }
-      int arrival_time = max(arrival_time_start, interval.start_ms + kBufferDurationMs);
+      int arrival_time = max(arrival_time_start, interval.start_ms);
       if (arrival_time + kBufferDurationMs > interval.end_ms) {
         continue;
       }

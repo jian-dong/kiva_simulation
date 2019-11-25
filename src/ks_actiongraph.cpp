@@ -8,9 +8,9 @@ namespace ks {
 
 using namespace std;
 
-void KsActionGraph::Cut(vector<RobotInfo> &robot_info) {
+void KsActionGraph::Cut(vector<RobotInfo> &robot_info, ShelfManager &shelf_manager) {
   assert(robot_info.size() == robot_count_);
-  cur_plan_p_->Cut(robot_info);
+  cur_plan_p_->Cut(robot_info, shelf_manager);
 }
 
 void KsActionGraph::SetPlan(const vector<ActionWithTimeSeq> &plan) {
@@ -38,7 +38,7 @@ vector<vector<Action>> KsActionGraph::GetCommands() {
   return rtn;
 }
 
-void GlobalPlan::Cut(vector<RobotInfo> &robot_info) {
+void GlobalPlan::Cut(vector<RobotInfo> &robot_info, ShelfManager &shelf_manager) {
   if (scheduled_to_change_) {
     robot_info = cached_robot_info_;
     return;
@@ -52,7 +52,15 @@ void GlobalPlan::Cut(vector<RobotInfo> &robot_info) {
 
   for (int robot_id = 0; robot_id < robot_count_; robot_id++) {
     for (int j = replied_action_index_[robot_id] + 1; j < to_send_action_index_[robot_id]; j++) {
-      ApplyActionOnRobot(plan_[robot_id][j], &(robot_info[robot_id]));
+      Action a = plan_[robot_id][j];
+      ApplyActionOnRobot(a, &(robot_info[robot_id]));
+      if (a == Action::ATTACH) {
+        shelf_manager.RemoveMapping(robot_info[robot_id].mission.wms_mission.shelf_id,
+                                    robot_info[robot_id].mission.wms_mission.pick_from.loc);
+      } else if (a == Action::DETACH) {
+        shelf_manager.AddMapping(robot_info[robot_id].mission.wms_mission.shelf_id,
+                                 robot_info[robot_id].mission.wms_mission.drop_to.loc);
+      }
     }
   }
 
@@ -91,7 +99,7 @@ void GlobalPlan::SetPlan(const vector<ActionWithTimeSeq> &plan) {
 vector<Action> GlobalPlan::GetActionToSend(int robot_id) {
   vector<Action> rtn;
   int action_index;
-  for (action_index = to_send_action_index_[robot_id]; action_index < (int)plan_[robot_id].size(); action_index++) {
+  for (action_index = to_send_action_index_[robot_id]; action_index < (int) plan_[robot_id].size(); action_index++) {
     Node to_send(robot_id, action_index);
     if (adj_.CanSendAction(to_send)) {
       rtn.push_back(plan_[robot_id][action_index]);

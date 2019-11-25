@@ -10,8 +10,29 @@ namespace ks {
 
 using namespace std;
 
+namespace {
+void PrintMissionInfo(const vector<RobotInfo>& robot_info) {
+  for (const auto& r : robot_info) {
+    cout << "robot id: " << r.id << " ";
+    if (r.has_mission) {
+      if (r.mission.is_internal) {
+        cout << "internal mission";
+      } else {
+        cout << r.mission.wms_mission.to_string();
+      }
+    } else {
+      cout << "has no mission.";
+    }
+    cout << endl;
+  }
+}
+}
+
 void KsScheduler::AddMission(WmsMission mission) {
   lock_guard<mutex> lock(mutex_io_up_);
+  cout << "received wms mission: from: " << mission.pick_from.loc.to_string()
+       << " to: " << mission.drop_to.loc.to_string()
+       << " shelf id: " << mission.shelf_id << endl;
   missions_from_wms_.insert(mission);
 }
 
@@ -28,7 +49,7 @@ void KsScheduler::Init(KsWmsApi *wms_p, KsSimulatorApi *simulator_p) {
 
   const std::vector<Location>& shelf_storage_points = ks_map_.GetShelfStoragePoints();
   // The way shelves are initialized.
-  for (int i = 0; i < ks_map_.actual_shelf_count_; i++) {
+  for (int i = 0; i < ks_map_.shelf_count_; i++) {
     shelf_manager_.AddMapping(i, shelf_storage_points[i]);
   }
 
@@ -42,6 +63,7 @@ void KsScheduler::Run() {
   // robots with assignment, for the new round of path planning.
   // 3. Give the whole new plan to executor.
   while (true) {
+    // TODO: should make this adaptive.
     SleepMS(kScheduleIntervalMs);
 
     mutex_io_up_.lock();
@@ -51,17 +73,22 @@ void KsScheduler::Run() {
     }
 
     mutex_.lock();
-    robot_manager_.AssignMissions(missions_from_wms_);
+    bool has_new_assignment = robot_manager_.AssignMissions(missions_from_wms_);
     mutex_io_up_.unlock();
 
-    vector<RobotInfo> robot_info = robot_manager_.GetRobotInfo();
-    action_graph_.Cut(robot_info);
+    if (!has_new_assignment) {
+      mutex_.unlock();
+      continue;
+    }
 
+    // Make a copy of current state.
+    vector<RobotInfo> tmp_robot_info = robot_manager_.GetRobotInfo();
     ShelfManager tmp_shelf_manager(shelf_manager_);
+    action_graph_.Cut(tmp_robot_info, tmp_shelf_manager);
+//    PrintMissionInfo(tmp_robot_info);
     mutex_.unlock();
 
-    PfResponse resp = sipp_p_->FindPath({robot_info}, &tmp_shelf_manager);
-
+    PfResponse resp = sipp_p_->FindPath({tmp_robot_info}, &tmp_shelf_manager);
     mutex_.lock();
     action_graph_.SetPlan(resp.plan);
     mutex_.unlock();
@@ -87,8 +114,10 @@ void KsScheduler::AdgRunner() {
       if (rtn.has_value()) {
         MissionReport r = rtn.value();
         if (r.type == MissionReportType::PICKUP_DONE) {
+          cout << "mission: " << r.mission.id << " pickup done. by robot: " << report.robot_id << endl;
           shelf_manager_.RemoveMapping(r.mission.shelf_id, r.mission.pick_from.loc);
         } else {
+          cout << "mission: " << r.mission.id << " drop down done. by robot: " << report.robot_id << endl;
           shelf_manager_.AddMapping(r.mission.shelf_id, r.mission.drop_to.loc);
         }
         wms_p_->ReportMissionStatus(r);

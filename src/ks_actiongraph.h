@@ -99,6 +99,7 @@ class GlobalPlan {
       to_send_action_index_[i] = 0;
       replied_action_index_[i] = -1;
     }
+    scheduled_to_change_ = false;
   }
 
   bool Finished() {
@@ -114,7 +115,7 @@ class GlobalPlan {
   std::vector<Action> GetActionToSend(int robot_id);
   // This function is idempotent, the current behavior is stop sending new commands, just wait
   // for all the already sent command to finish.
-  void Cut(std::vector<RobotInfo> &robot_info);
+  void Cut(std::vector<RobotInfo> &robot_info, ShelfManager &shelf_manager);
   // This function may be called on the next plan multiple times.
   void SetPlan(const std::vector<ActionWithTimeSeq> &plan);
 
@@ -140,7 +141,7 @@ class KsActionGraph {
     next_plan_p_->Clear();
   };
 
-  void Cut(std::vector<RobotInfo> &robot_info);
+  void Cut(std::vector<RobotInfo> &robot_info, ShelfManager &shelf_manager);
   void SetPlan(const std::vector<ActionWithTimeSeq> &plan);
   void UpdateRobotStatus(int robot_id, Action a);
   std::vector<std::vector<Action>> GetCommands();

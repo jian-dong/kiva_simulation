@@ -5,7 +5,6 @@
 #include <cassert>
 
 #include "constants.h"
-#include "ks_scheduler.h"
 #include "logger.h"
 #include "utilities.h"
 
@@ -39,19 +38,19 @@ std::optional<T> ReserviorSampling(const vector<T> &array, bool (T::*predicator)
 
 void KsWms::Init(KsSchedulerApi *scheduler_p) {
   scheduler_p_ = scheduler_p;
-  for (int i = 0; i < kShelfOperationPointCount; i++) {
+  for (int i = 0; i < ks_map_.operation_point_count_; i++) {
     operation_point_info_.emplace_back(i);
   }
-  for (int i = 0; i < kShelfStoragePointCount; i++) {
+  for (int i = 0; i < ks_map_.storage_point_count_; i++) {
     storage_point_info_.emplace_back(i);
   }
 
-  shelf_info_.resize(ks_map_.actual_shelf_count_);
+  shelf_info_.resize(ks_map_.shelf_count_);
   mission_id_counter_ = 0;
   move_to_op_mission_count_ = 0;
 
   // The way shelves are initialized.
-  for (int i = 0; i < ks_map_.actual_shelf_count_; i++) {
+  for (int i = 0; i < ks_map_.shelf_count_; i++) {
     storage_point_info_[i].shelf_id = i;
   }
 }

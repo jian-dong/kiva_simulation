@@ -12,28 +12,23 @@ namespace ks {
 
 const char * const kMapFilePath = "../data/map_1.map";
 
-const int kRobotCount = 1;
-
 // WMS related.
-const int kPendingMoveToOperationMissionLimit = 100; // 400
+const int kPendingMoveToOperationMissionLimit = 20; // 400
 const int kMissionGenerationIntervalMs = 3000;
 const int kMinOperationTimeS = 20;
 const int kMoveOutProb = 20;
 
 // Scheduler related.
-const int kScheduleIntervalMs = 4000;
+const int kScheduleIntervalMs = 5000;
 const int kUpdateIntervalMs = 300;
 
 // Map related.
 const char kShelfOperationPoint = 'P';
 const char kShelfStoragePoint = 'S';
 const char kRestArea = 'R';
-const int kXLimit = 81;
-const int kYLimit = 101;
-const int kShelfOperationPointCount = 320;
-const int kShelfStoragePointCount = 3200;
-//const int kShelfCount = 100;
-const int kRestAreaCount = 152;
+// Storage capability.
+const int kXLimit = 120;
+const int kYLimit = 120;
 
 // SIPP related.
 const double kDoubleInf = DBL_MAX / 2;
@@ -73,10 +68,9 @@ const int kSimulatorSleepDurationMs = 100;
 
 const int kTurnDurationMs = 1000;
 const int kAttachDetachDurationMs = 2000;
-const int kMoveDurationMs = 1000;
+const int kMoveDurationMs = 1000; // TODO: why changing this value changes the planning time a lot?
 const int kWaitDurationMs = 1000;
-// The buffer duration is at least the move duration.
-const int kBufferDurationMs = kMoveDurationMs;
+const int kBufferDurationMs = kMoveDurationMs * 2;
 const int kMillisecondsPerSecond = 1000;
 
 const char *const kRedisHostname = "127.0.0.1";
