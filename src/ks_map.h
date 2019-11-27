@@ -15,12 +15,10 @@ class KsMap {
   const std::vector<Location>& GetPassableLocations() const;
   const std::vector<Location>& GetShelfOperationPoints() const;
   const std::vector<Location>& GetShelfStoragePoints() const;
-  const std::vector<Location>& GetRestAreas() const;
   bool IsLocationPassable(const Location& loc) const;
 
   int robot_count_;
   int shelf_count_;
-  int rest_area_count_;
   int operation_point_count_;
   int storage_point_count_;
 
@@ -35,7 +33,6 @@ class KsMap {
   std::vector<Location> ssps_;
   // Passable loations.
   std::vector<Location> passable_;
-  std::vector<Location> rest_area_;
 };
 
 }

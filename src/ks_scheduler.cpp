@@ -73,22 +73,20 @@ void KsScheduler::Run() {
     }
 
     mutex_.lock();
-    bool has_new_assignment = robot_manager_.AssignMissions(missions_from_wms_);
-    mutex_io_up_.unlock();
 
-    if (!has_new_assignment) {
-      mutex_.unlock();
-      continue;
-    }
+    // Assign missions.
+    robot_manager_.AssignMissions(missions_from_wms_);
+    mutex_io_up_.unlock();
 
     // Make a copy of current state.
     vector<RobotInfo> tmp_robot_info = robot_manager_.GetRobotInfo();
     ShelfManager tmp_shelf_manager(shelf_manager_);
     action_graph_.Cut(tmp_robot_info, tmp_shelf_manager);
-//    PrintMissionInfo(tmp_robot_info);
     mutex_.unlock();
 
+    // Do not lock during FindPath()(which can be time consuming).
     PfResponse resp = sipp_p_->FindPath({tmp_robot_info}, &tmp_shelf_manager);
+
     mutex_.lock();
     action_graph_.SetPlan(resp.plan);
     mutex_.unlock();

@@ -14,8 +14,8 @@ CANVAS_SHIFT = 16
 SCALING_FACTOR = 10
 
 # Data related constants.
-X_LEN = 81
-Y_LEN = 101
+X_LEN = 0
+Y_LEN = 0
 ROBOT_COUNT = 0
 SHELF_COUNT = 0
 
@@ -143,13 +143,11 @@ class ObjManager(object):
 
     def __init__(self, canvas):
         self.canvas = canvas
-        # Draw robots and shelfs according to a default initial configuration.
-        self.grids = [[Grid(canvas) for y in range(Y_LEN)] for x in range(X_LEN)]
         self.load_map()
         self.robots = [Robot(canvas) for x in range(ROBOT_COUNT)]
 
     def load_map(self):
-        map_file = open("../data/map_1.map", "r")
+        map_file = open("../data/map_2.map", "r")
 
         list_of_lines = []
         for raw_line in map_file:
@@ -158,10 +156,18 @@ class ObjManager(object):
                 continue
             list_of_lines.append(line)
 
+        global X_LEN
+        X_LEN = int(list_of_lines[0])
+        global Y_LEN
+        Y_LEN = int(list_of_lines[1])
+
         global ROBOT_COUNT
         ROBOT_COUNT = int(list_of_lines[2])
         global SHELF_COUNT
         SHELF_COUNT = int(list_of_lines[3])
+
+        # Draw robots and shelfs according to a default initial configuration.
+        self.grids = [[Grid(self.canvas) for y in range(Y_LEN)] for x in range(X_LEN)]
 
         list_of_lines = list_of_lines[4:]
         assert (len(list_of_lines) == X_LEN)

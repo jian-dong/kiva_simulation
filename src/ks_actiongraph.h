@@ -127,6 +127,7 @@ class GlobalPlan {
 
   bool scheduled_to_change_;
   std::vector<RobotInfo> cached_robot_info_;
+  ShelfManager cached_shelf_manager_;
 
   std::vector<std::vector<Action>> plan_;
   TwoWayAdjList adj_;

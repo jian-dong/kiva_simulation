@@ -30,20 +30,21 @@ struct SpatioTemporalPoint {
     if (pos != o.pos) {
       return pos < o.pos;
     }
-    if (time_ms != o.time_ms) {
-      return time_ms < o.time_ms;
-    }
     return safe_interval_index < o.safe_interval_index;
   }
 
-  bool operator==(const SpatioTemporalPoint &o) const {
+  // Intentionally avoids overload the "==" and "!=" operator.
+  // Because operator< does not consider consider time_ms while
+  // here it is considered. TODO: think of if time_ms can be
+  // ignored here.
+  bool EqualsTo(const SpatioTemporalPoint &o) const {
     return pos == o.pos
         && time_ms == o.time_ms
         && safe_interval_index == o.safe_interval_index;
   }
 
-  bool operator!=(const SpatioTemporalPoint &o) const {
-    return !operator==(o);
+  bool NotEqualsTo(const SpatioTemporalPoint &o) const {
+    return !EqualsTo(o);
   }
 
   std::string to_string() {
@@ -84,7 +85,9 @@ class SippAstar {
   SippAstar(const KsMap &ks_map,
             const std::map<Location, IntervalSeq> &safe_intervals,
             ShelfManager *shelf_manager_p)
-      : map_(ks_map), safe_intervals_(safe_intervals), shelf_manager_p_(shelf_manager_p) {};
+      : map_(ks_map), safe_intervals_(safe_intervals), shelf_manager_p_(shelf_manager_p) {
+    pushed_count_ = 0;
+  };
 
   // Return a sequence of actions to move the robot from src to dest.
   ActionWithTimeSeq GetActions(int start_time_ms, const bool has_shelf, const Position pos, const Location dest);
@@ -108,6 +111,7 @@ class SippAstar {
   SpatioTemporalPoint src_;
   Location dest_;
   bool has_shelf_;
+  uint64_t pushed_count_;
 };
 
 }

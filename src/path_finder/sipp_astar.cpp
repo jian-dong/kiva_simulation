@@ -14,6 +14,7 @@ ActionWithTimeSeq SippAstar::GetActions(int start_time_ms,
                                         const bool has_shelf,
                                         const Position pos,
                                         const Location dest) {
+  pushed_count_ = 0;
   has_shelf_ = has_shelf;
   dest_ = dest;
   int start_safe_interval_index = safe_intervals_.at(pos.loc).GetIntervalIndex(start_time_ms);
@@ -26,6 +27,9 @@ ActionWithTimeSeq SippAstar::GetActions(int start_time_ms,
 //  cout << "from: " << pos.to_string() << " to: " << dest_.to_string() << endl;
 
   while (!open_.empty()) {
+    if (pushed_count_ > 1000000) {
+      LogFatal("Pushed a lot.");
+    }
     cur_state = open_.top();
     open_.pop();
 
@@ -59,6 +63,7 @@ ActionWithTimeSeq SippAstar::GetActions(int start_time_ms,
 
       prev_[new_state.stp] = {action_to_new_state, cur_state.stp};
       open_.push(new_state);
+      pushed_count_++;
     }
   }
 
@@ -112,7 +117,7 @@ std::vector<std::pair<State, ActionWithTime>> SippAstar::GenSuccessors(const Sta
 ActionWithTimeSeq SippAstar::GenActionSeq(State cur_state) {
   ActionWithTimeSeq rtn;
   SpatioTemporalPoint stp = cur_state.stp;
-  while (stp != src_) {
+  while (stp.NotEqualsTo(src_)) {
     const auto &prev = prev_[stp];
 //    cout << "pushed action with time: " << prev.action_with_time.to_string() << endl;
     rtn.push_back(prev.action_with_time);

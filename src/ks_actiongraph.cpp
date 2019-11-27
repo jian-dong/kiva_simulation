@@ -28,10 +28,6 @@ vector<vector<Action>> KsActionGraph::GetCommands() {
   }
 
   vector<vector<Action>> rtn(robot_count_);
-  if (cur_plan_p_->Finished()) {
-    return rtn;
-  }
-
   for (int i = 0; i < robot_count_; i++) {
     rtn[i] = cur_plan_p_->GetActionToSend(i);
   }
@@ -41,6 +37,7 @@ vector<vector<Action>> KsActionGraph::GetCommands() {
 void GlobalPlan::Cut(vector<RobotInfo> &robot_info, ShelfManager &shelf_manager) {
   if (scheduled_to_change_) {
     robot_info = cached_robot_info_;
+    shelf_manager = cached_shelf_manager_;
     return;
   } else {
     scheduled_to_change_ = true;
@@ -65,6 +62,7 @@ void GlobalPlan::Cut(vector<RobotInfo> &robot_info, ShelfManager &shelf_manager)
   }
 
   cached_robot_info_ = robot_info;
+  cached_shelf_manager_ = shelf_manager;
 }
 
 void GlobalPlan::SetPlan(const vector<ActionWithTimeSeq> &plan) {
@@ -100,6 +98,9 @@ vector<Action> GlobalPlan::GetActionToSend(int robot_id) {
   vector<Action> rtn;
   int action_index;
   for (action_index = to_send_action_index_[robot_id]; action_index < (int) plan_[robot_id].size(); action_index++) {
+    if (action_index - replied_action_index_[robot_id] > 5) {
+      break;
+    }
     Node to_send(robot_id, action_index);
     if (adj_.CanSendAction(to_send)) {
       rtn.push_back(plan_[robot_id][action_index]);

@@ -20,6 +20,8 @@ struct Mission {
   WmsMission wms_mission;
   InternalMission internal_mission;
   Mission() = default;
+  explicit Mission(WmsMission wms_mission) : wms_mission(wms_mission), is_internal(false) {};
+  explicit Mission(InternalMission internal_mission) : internal_mission(internal_mission), is_internal(true) {};
   Mission &operator=(const Mission &o) = default;
 };
 
@@ -148,6 +150,10 @@ class ShelfManager {
  public:
   ShelfManager() = default;
   ShelfManager(const ShelfManager& o) {
+    loc_to_id_ = o.loc_to_id_;
+  }
+  ShelfManager& operator= (const ShelfManager &o) {
+    loc_to_id_.clear();
     loc_to_id_ = o.loc_to_id_;
   }
 

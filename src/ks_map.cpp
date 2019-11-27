@@ -44,12 +44,8 @@ KsMap::KsMap(std::string file_name) {
       if (map_[x][y] != 'B' && map_[x][y] != 'O' && map_[x][y] != 'T') {
         passable_.emplace_back(x, y);
       }
-      if (map_[x][y] == kRestArea) {
-        rest_area_.emplace_back(x, y);
-      }
     }
   }
-  rest_area_count_ = rest_area_.size();
   operation_point_count_ = sops_.size();
   storage_point_count_ = ssps_.size();
 }
@@ -64,10 +60,6 @@ const std::vector<Location> &KsMap::GetShelfStoragePoints() const {
 
 const std::vector<Location> &KsMap::GetPassableLocations() const {
   return passable_;
-}
-
-const std::vector<Location> &KsMap::GetRestAreas() const {
-  return rest_area_;
 }
 
 bool KsMap::IsLocationPassable(const Location &loc) const {

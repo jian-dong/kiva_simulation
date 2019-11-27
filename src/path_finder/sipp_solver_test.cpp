@@ -149,44 +149,44 @@ class Basic : public ::testing::Test {
 //  }
 //}
 
-TEST_F(Basic, Basic3) {
-  KsMap ks_map(kMapFilePath);
-  ShelfManager shelf_manager;
-  for (int i = 0; i< ks_map.shelf_count_; i++) {
-    shelf_manager.AddMapping(0, ks_map.GetShelfStoragePoints()[i]);
-  }
-
-  SippSolver solver(ks_map);
-
-  RobotInfo robot0(0, {1, 7});
-  robot0.pos.dir = Direction::NORTH;
-  robot0.has_mission = true;
-  robot0.mission.is_internal = false;
-  robot0.mission.wms_mission.pick_from.loc = {1, 47};
-  robot0.mission.wms_mission.drop_to.loc = {79, 95};
-
-  RobotInfo robot1(0, {1, 8});
-  robot1.pos.dir = Direction::NORTH;
-  robot1.has_mission = true;
-  robot1.mission.is_internal = false;
-  robot1.mission.wms_mission.pick_from.loc = {3, 37};
-  robot1.mission.wms_mission.drop_to.loc = {26, 2};
-
-  PfRequest req;
-  req.robots.push_back(robot0);
-  req.robots.push_back(robot1);
-  PfResponse resp = solver.FindPath(req, &shelf_manager);
-
-  for (int i = 0; i < resp.plan.size(); i++) {
-    ActionWithTimeSeq &ac = resp.plan[i];
-    cout << "robot id: " << i << endl;
-    for (ActionWithTime a : ac) {
-      cout << "action: " + kActionToString.at(a.action)
-           << " start: " << a.start_time_ms << " end: " << a.end_time_ms << endl;
-    }
-    cout << endl;
-  }
-}
+//TEST_F(Basic, Basic3) {
+//  KsMap ks_map(kMapFilePath);
+//  ShelfManager shelf_manager;
+//  for (int i = 0; i< ks_map.shelf_count_; i++) {
+//    shelf_manager.AddMapping(0, ks_map.GetShelfStoragePoints()[i]);
+//  }
+//
+//  SippSolver solver(ks_map);
+//
+//  RobotInfo robot0(0, {1, 7});
+//  robot0.pos.dir = Direction::NORTH;
+//  robot0.has_mission = true;
+//  robot0.mission.is_internal = false;
+//  robot0.mission.wms_mission.pick_from.loc = {1, 47};
+//  robot0.mission.wms_mission.drop_to.loc = {79, 95};
+//
+//  RobotInfo robot1(0, {1, 8});
+//  robot1.pos.dir = Direction::NORTH;
+//  robot1.has_mission = true;
+//  robot1.mission.is_internal = false;
+//  robot1.mission.wms_mission.pick_from.loc = {3, 37};
+//  robot1.mission.wms_mission.drop_to.loc = {26, 2};
+//
+//  PfRequest req;
+//  req.robots.push_back(robot0);
+//  req.robots.push_back(robot1);
+//  PfResponse resp = solver.FindPath(req, &shelf_manager);
+//
+//  for (int i = 0; i < resp.plan.size(); i++) {
+//    ActionWithTimeSeq &ac = resp.plan[i];
+//    cout << "robot id: " << i << endl;
+//    for (ActionWithTime a : ac) {
+//      cout << "action: " + kActionToString.at(a.action)
+//           << " start: " << a.start_time_ms << " end: " << a.end_time_ms << endl;
+//    }
+//    cout << endl;
+//  }
+//}
 
 }
 

@@ -14,11 +14,10 @@ namespace ks {
 // A pure data class.
 class KsRobotManager {
  public:
-  KsRobotManager(const KsMap &ks_map) : ks_map_(ks_map), rest_areas_(ks_map.GetRestAreas()) {};
+  KsRobotManager(const KsMap &ks_map) : ks_map_(ks_map) {};
   void Init();
 
-  // Returns true if there is a new assignment.
-  bool AssignMissions(std::set<WmsMission> &missions);
+  void AssignMissions(std::set<WmsMission> &missions);
   std::optional<MissionReport> UpdateRobotStatus(int robot_id, Action a);
   const std::vector<RobotInfo>& GetRobotInfo() const { return robot_info_; };
 
@@ -27,15 +26,12 @@ class KsRobotManager {
   std::vector<RobotInfo*> GetIdleRobots();
   RobotInfo* GetIdleRobotAtLocation(Location loc);
   RobotInfo* GetClosestIdleRobot(Location loc);
-  bool HasIdleRobots() { return !GetIdleRobots().empty();};
-  Location AssignToRestArea(int robot_id);
-  void MaybeFreeFromRestArea(int robot_id);
+  bool HasIdleRobot() { return !GetIdleRobots().empty();};
+  bool IsMissionValid(const WmsMission &mission);
+  std::set<Location> GetFreeLocations(const std::set<WmsMission> &missions);
 
   // Stubs.
   const KsMap &ks_map_;
-  const std::vector<Location>& rest_areas_;
-  std::vector<int> rest_area_assignment_;
-
   // Data.
   std::vector<RobotInfo> robot_info_;
 };

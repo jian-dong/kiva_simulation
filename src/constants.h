@@ -10,16 +10,16 @@
 
 namespace ks {
 
-const char * const kMapFilePath = "../data/map_1.map";
+const char * const kMapFilePath = "../data/map_2.map";
 
 // WMS related.
-const int kPendingMoveToOperationMissionLimit = 20; // 400
+const int kPendingMoveToOperationMissionLimit = 10; // 400
 const int kMissionGenerationIntervalMs = 3000;
 const int kMinOperationTimeS = 20;
 const int kMoveOutProb = 20;
 
 // Scheduler related.
-const int kScheduleIntervalMs = 5000;
+const int kScheduleIntervalMs = 6000;
 const int kUpdateIntervalMs = 300;
 
 // Map related.
@@ -77,6 +77,5 @@ const char *const kRedisHostname = "127.0.0.1";
 const int kRedisPort = 6379;
 const char *const kRedisKey = "ks";
 }
-
 
 #endif
