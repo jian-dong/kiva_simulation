@@ -14,7 +14,6 @@ ActionWithTimeSeq SippAstar::GetActions(int start_time_ms,
                                         const bool has_shelf,
                                         const Position pos,
                                         const Location dest) {
-  pushed_count_ = 0;
   has_shelf_ = has_shelf;
   dest_ = dest;
   int start_safe_interval_index = safe_intervals_.at(pos.loc).GetIntervalIndex(start_time_ms);
@@ -27,9 +26,6 @@ ActionWithTimeSeq SippAstar::GetActions(int start_time_ms,
 //  cout << "from: " << pos.to_string() << " to: " << dest_.to_string() << endl;
 
   while (!open_.empty()) {
-    if (pushed_count_ > 1000000) {
-      LogFatal("Pushed a lot.");
-    }
     cur_state = open_.top();
     open_.pop();
 
@@ -63,7 +59,6 @@ ActionWithTimeSeq SippAstar::GetActions(int start_time_ms,
 
       prev_[new_state.stp] = {action_to_new_state, cur_state.stp};
       open_.push(new_state);
-      pushed_count_++;
     }
   }
 
@@ -80,7 +75,8 @@ int SippAstar::GetHeuristicMs(Location a, Location b) {
 std::vector<std::pair<State, ActionWithTime>> SippAstar::GenSuccessors(const State &cur_state) {
   vector<pair<State, ActionWithTime>> rtn;
   for (Action a : kSippActions) {
-    Position new_pos = ApplyActionOnPosition(a, cur_state.stp.pos);
+    Position new_pos = cur_state.stp.pos;
+    ApplyActionOnPosition(a, &new_pos);
     if (!map_.IsLocationPassable(new_pos.loc)) {
       continue;
     }

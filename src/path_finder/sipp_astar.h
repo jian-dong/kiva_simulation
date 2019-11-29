@@ -86,7 +86,6 @@ class SippAstar {
             const std::map<Location, IntervalSeq> &safe_intervals,
             ShelfManager *shelf_manager_p)
       : map_(ks_map), safe_intervals_(safe_intervals), shelf_manager_p_(shelf_manager_p) {
-    pushed_count_ = 0;
   };
 
   // Return a sequence of actions to move the robot from src to dest.
@@ -111,7 +110,6 @@ class SippAstar {
   SpatioTemporalPoint src_;
   Location dest_;
   bool has_shelf_;
-  uint64_t pushed_count_;
 };
 
 }

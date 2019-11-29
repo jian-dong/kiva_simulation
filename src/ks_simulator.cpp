@@ -30,10 +30,11 @@ milliseconds GetActionDuration(Action a) {
 }
 
 void KsSimulator::Init(KsSchedulerApi *scheduler_p, const KsMap &ks_map) {
+  robot_count_ = ks_map.robot_count_;
   scheduler_p_ = scheduler_p;
 
   const vector<Location> &shelf_storage_points = ks_map.GetShelfStoragePoints();
-  for (int i = 0; i < ks_map.robot_count_; i++) {
+  for (int i = 0; i < robot_count_; i++) {
     robot_status_.emplace_back(i, shelf_storage_points[i]);
   }
 
@@ -48,6 +49,8 @@ void KsSimulator::Init(KsSchedulerApi *scheduler_p, const KsMap &ks_map) {
   if (redis_ == nullptr || redis_->err) {
     LogFatal("Failed to connect to redis");
   }
+
+  robot_status_sanity_check_.resize(robot_count_);
 }
 
 void KsSimulator::AddActions(Command action_seq) {
@@ -92,8 +95,12 @@ void KsSimulator::Run() {
 
     const auto cur_time = GetCurrentTime();
     std::stringstream sstream;
+    sstream << std::setprecision(2) << std::fixed;
     for (RobotStatus& r : robot_status_) {
-      r.OutputStatus(sstream, cur_time);
+      const auto& s = r.OutputStatus(cur_time);
+      robot_status_sanity_check_[s.id] = s;
+      sstream << s.loc.x << " " << s.loc.y << " " << s.direction
+          << " " << s.shelf_attached << " ";
     }
     for (const auto& loc : shelf_id_to_loc_) {
       sstream << loc.x << " " << loc.y << " ";
@@ -112,6 +119,7 @@ void KsSimulator::Run() {
     std::chrono::duration<double> elapsed_seconds = redis_end - redis_start;
 //    std::cout << "Redis set elapsed time: " << elapsed_seconds.count() << "s\n";
 
+    SanityCheck();
     SleepMS(kSimulatorSleepDurationMs);
   }
 }
@@ -151,6 +159,17 @@ void KsSimulator::RedisSet(const string &key, const string &value) {
   redisReply *reply;
   reply = (redisReply *) redisCommand(redis_, "SET %s %s", key.c_str(), value.c_str());
   freeReplyObject(reply);
+}
+
+void KsSimulator::SanityCheck() {
+  for (int i = 0; i < robot_count_; i++) {
+    for (int j = i + 1; j < robot_count_; j++) {
+      if (GetDist(robot_status_sanity_check_[i].loc, robot_status_sanity_check_[j].loc) < 0.8) {
+//        LogFatal("Collision.");
+        cout << "Collision." << endl;
+      }
+    }
+  }
 }
 
 }

@@ -19,8 +19,16 @@ class ShelfManager;
 struct Interval {
   int start_ms;
   int end_ms;
+  int robot_id;
+
+  Interval(int start_ms, int end_ms, int robot_id) :
+      start_ms(start_ms), end_ms(end_ms), robot_id(robot_id) {
+    assert(start_ms < end_ms);
+  };
+
   Interval(int start_ms, int end_ms) : start_ms(start_ms), end_ms(end_ms) {
     assert(start_ms < end_ms);
+    robot_id = -1;
   };
 
   bool Includes(int time_ms) const {
@@ -51,22 +59,50 @@ struct Interval {
   }
 };
 
+class IntervalSet {
+ public:
+  IntervalSet() = default;
+  std::vector<Interval> intervals_;
+
+  void AddInterval(int start_ms, int robot_id) {
+    AddInterval(start_ms, kIntInf, robot_id);
+  }
+
+  void AddInterval(int start_ms, int end_ms, int robot_id) {
+    intervals_.emplace_back(start_ms, end_ms, robot_id);
+    std::sort(intervals_.begin(), intervals_.end());
+    SanityCheck();
+  }
+
+  void SanityCheck() const {
+    for (int i = 0; i < ((int) intervals_.size() - 1); i++) {
+      if (intervals_[i].end_ms > intervals_[i + 1].start_ms) {
+        LogFatal("Invalid interval.");
+      }
+    }
+  }
+};
+
 class IntervalSeq {
  public:
   std::vector<Interval> intervals_;
+  std::vector<Interval> unsafe_intervals_;
   IntervalSeq() {
     intervals_.clear();
     intervals_.emplace_back(0, kIntInf);
+    unsafe_intervals_.clear();
   };
 
   IntervalSeq(const IntervalSeq &o) {
     intervals_ = o.intervals_;
+    unsafe_intervals_ = o.unsafe_intervals_;
   };
 
-  void RemoveInterval(int start_ms, int end_ms) {
+  void RemoveInterval(int start_ms, int end_ms, int robot_id) {
 //    std::cout << "removal: start: " << std::to_string(start) << " end: " << std::to_string(end) << std::endl;
     int index = GetIntervalIndex(start_ms);
     Interval tmp = intervals_[index];
+    assert(tmp.start_ms <= start_ms && end_ms <= tmp.end_ms);
     intervals_.erase(intervals_.begin() + index);
     if (tmp.start_ms < start_ms) {
       Interval tmp_1 = Interval(tmp.start_ms, start_ms);
@@ -79,10 +115,14 @@ class IntervalSeq {
     }
 
     std::sort(intervals_.begin(), intervals_.end());
+
+    unsafe_intervals_.emplace_back(start_ms, end_ms, robot_id);
+    std::sort(unsafe_intervals_.begin(), unsafe_intervals_.end());
+
     SanityCheck();
   }
 
-  void RemoveInterval(int start_ms) {
+  void RemoveInterval(int start_ms, int robot_id) {
 //    std::cout << "removal: start: " << std::to_string(start) << std::endl;
     int index = GetIntervalIndex(start_ms);
     Interval tmp = intervals_[index];
@@ -91,6 +131,7 @@ class IntervalSeq {
       Interval last = Interval(tmp.start_ms, start_ms);
       intervals_.push_back(last);
     }
+    unsafe_intervals_.emplace_back(start_ms, kIntInf, robot_id);
     SanityCheck();
   }
 
@@ -136,6 +177,10 @@ class IntervalSeq {
 struct PfRequest {
   // Includes all robots.
   std::vector<RobotInfo> robots;
+  std::vector<ActionWithTimeSeq> prev_plan;
+
+  PfRequest(std::vector<RobotInfo> robots, std::vector<ActionWithTimeSeq> prev_plan)
+      : robots(robots), prev_plan(prev_plan) {};
 };
 
 struct PfResponse {
@@ -152,7 +197,10 @@ class SippSolver {
  private:
   void PlanInternalMission(const RobotInfo &robot, ActionWithTimeSeq *rtn);
   void PlanWmsMission(const RobotInfo &robot, ActionWithTimeSeq *rtn);
-  void UpdateSafeIntervalsWithActions(int start_time_ms, Position pos, const ActionWithTimeSeq &seq);
+  void UpdateSafeIntervalsWithActions(int start_time_ms,
+                                      Position pos,
+                                      const ActionWithTimeSeq &seq,
+                                      int robot_id);
 
   const KsMap &map_;
   std::map<Location, IntervalSeq> safe_intervals_;

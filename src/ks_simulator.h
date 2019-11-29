@@ -38,6 +38,11 @@ struct LocationDouble {
   }
 };
 
+inline double GetDist(const LocationDouble &a, const LocationDouble &b) {
+  return std::sqrt((a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y));
+}
+
+
 inline LocationDouble operator+(const LocationDouble& p, const std::pair<int, int>& o) {
   return LocationDouble(p.x + o.first, p.y + o.second);
 }
@@ -72,6 +77,13 @@ struct ActionProgress {
   }
 };
 
+struct OutputRobotStatus {
+  int id;
+  LocationDouble loc;
+  double direction;
+  bool shelf_attached;
+};
+
 // Represents the robot status in the physical world.
 struct RobotStatus {
   int id;
@@ -88,7 +100,7 @@ struct RobotStatus {
     shelf_attached = false;
   }
 
-  void OutputStatus(std::stringstream& str, const TimePoint& cur_time) {
+  OutputRobotStatus OutputStatus(const TimePoint &cur_time) {
     double x = loc.x, y = loc.y;
     double dir_rad = kDirectionToRadian.at(dir);
     double x_modifier = 0, y_modifier = 0, dir_modifier = 0;
@@ -111,10 +123,7 @@ struct RobotStatus {
     x += x_modifier;
     y += y_modifier;
     dir_rad += dir_modifier;
-
-    // TODO: maybe remove the to_string here, just put double there should be ok, and precision can be set.
-    str << std::to_string(x) << " " << std::to_string(y) << " " << std::to_string(dir_rad)
-        << " " << std::to_string(shelf_attached) << " ";
+    return {id, {x, y}, dir_rad, shelf_attached};
   }
 };
 
@@ -129,6 +138,7 @@ class KsSimulator : public KsSimulatorApi {
  private:
   void UpdateWithAction(RobotStatus &r, Action a);
   void RedisSet(const std::string &key, const std::string &value);
+  void SanityCheck();
 
   // IO related fields. Once a message queue
   std::mutex mutex_io_;
@@ -140,6 +150,8 @@ class KsSimulator : public KsSimulatorApi {
   // update robot status and write to redis. so there is no need to lock the main data
   // structure. We only need to lock the io related fields.
   std::vector<RobotStatus> robot_status_;
+  std::vector<OutputRobotStatus> robot_status_sanity_check_;
+  int robot_count_;
 
   // Index of this array is the shelf id, value of this array is the shelf location. (-1, -1) for
   // shelf on a robot.

@@ -55,12 +55,7 @@ class TwoWayAdjList {
     if (radj_[to].size() == 0) {
       return true;
     }
-//    if (radj_[to].size() == 1) {
-//      assert(to.robot_id == radj_[to].begin()->robot_id);
-//      return true;
-//    }
     return false;
-//    return radj_[to].size() == 1;
   }
 
   void Clear() {
@@ -77,20 +72,22 @@ class TwoWayAdjList {
 class GlobalPlan {
  public:
   GlobalPlan(int robot_count) : robot_count_(robot_count){
-    scheduled_to_change_ = false;
+    plan_set_ = false;
     plan_.resize(robot_count);
-    adj_.Clear();
     to_send_action_index_.resize(robot_count);
     replied_action_index_.resize(robot_count);
     for (int i = 0; i < robot_count_; i++) {
       to_send_action_index_[i] = 0;
       replied_action_index_[i] = -1;
     }
+    adj_.Clear();
+    target_robot_info_.clear();
   }
 
   GlobalPlan(const GlobalPlan& o) = default;
 
   void Clear() {
+    plan_set_ = false;
     for (int i = 0; i < robot_count_; i++) {
       plan_[i].clear();
     }
@@ -99,15 +96,24 @@ class GlobalPlan {
       to_send_action_index_[i] = 0;
       replied_action_index_[i] = -1;
     }
-    scheduled_to_change_ = false;
+    target_robot_info_.clear();
   }
 
-  bool Finished() {
+  bool Finished(const std::vector<RobotInfo> &robot_info) {
+    assert(plan_set_);
     for (int i = 0; i < robot_count_; i++) {
       if (replied_action_index_[i] < (((int)plan_[i].size()) - 1)) {
         return false;
       }
     }
+    if (target_robot_info_ != robot_info) {
+      std::cout << "target robot info: " << std::endl;
+      PrintRobotInfo(target_robot_info_);
+      std::cout << "actual robot info: " << std::endl;
+      PrintRobotInfo(robot_info);
+      std::cout << std::endl;
+    }
+    assert(target_robot_info_ == robot_info);
     return true;
   }
 
@@ -115,9 +121,11 @@ class GlobalPlan {
   std::vector<Action> GetActionToSend(int robot_id);
   // This function is idempotent, the current behavior is stop sending new commands, just wait
   // for all the already sent command to finish.
-  void Cut(std::vector<RobotInfo> &robot_info, ShelfManager &shelf_manager);
+  void Cut(std::vector<RobotInfo> &robot_info,
+           ShelfManager &shelf_manager,
+           std::vector<ActionWithTimeSeq> &remaining_plan);
   // This function may be called on the next plan multiple times.
-  void SetPlan(const std::vector<ActionWithTimeSeq> &plan);
+  void SetPlan(std::vector<RobotInfo> init_robot_info, const std::vector<ActionWithTimeSeq> &plan);
 
   const int robot_count_;
   // Initialized to 0, when this value is equal to the action count, all the actions are sent.
@@ -125,11 +133,11 @@ class GlobalPlan {
   // Initialized to -1, when this is equal to <last_action_index_>, this plan is considered done.
   std::vector<int> replied_action_index_;
 
-  bool scheduled_to_change_;
-  std::vector<RobotInfo> cached_robot_info_;
-  ShelfManager cached_shelf_manager_;
+  // Robot status if all the actions in this plan are executed.
+  std::vector<RobotInfo> target_robot_info_;
+  bool plan_set_;
 
-  std::vector<std::vector<Action>> plan_;
+  std::vector<std::vector<ActionWithTime>> plan_;
   TwoWayAdjList adj_;
 };
 
@@ -142,10 +150,12 @@ class KsActionGraph {
     next_plan_p_->Clear();
   };
 
-  void Cut(std::vector<RobotInfo> &robot_info, ShelfManager &shelf_manager);
-  void SetPlan(const std::vector<ActionWithTimeSeq> &plan);
+  void Cut(std::vector<RobotInfo> &robot_info,
+           ShelfManager &shelf_manager,
+           std::vector<ActionWithTimeSeq> &remaining_plan);
+  void SetPlan(const std::vector<RobotInfo> &prev_robot_info, const std::vector<ActionWithTimeSeq> &plan);
   void UpdateRobotStatus(int robot_id, Action a);
-  std::vector<std::vector<Action>> GetCommands();
+  std::vector<std::vector<Action>> GetCommands(const std::vector<RobotInfo> &robot_info);
 
  private:
   const int robot_count_;

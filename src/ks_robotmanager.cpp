@@ -75,6 +75,8 @@ void KsRobotManager::AssignMissions(std::set<WmsMission> &missions) {
         r->mission.is_internal = true;
         r->mission.internal_mission.to = *free_locations.begin();
         free_locations.erase(free_locations.begin());
+        cout << "Assigned internal mission to robot: " << r->id
+            << " move to: " << r->mission.internal_mission.to.to_string() << endl;
       }
     }
   }

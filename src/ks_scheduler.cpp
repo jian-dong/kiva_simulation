@@ -5,14 +5,15 @@
 
 #include "path_finder/sipp_solver.h"
 #include "utilities.h"
+#include "ks_scheduler_common.h"
 
 namespace ks {
 
 using namespace std;
 
 namespace {
-void PrintMissionInfo(const vector<RobotInfo>& robot_info) {
-  for (const auto& r : robot_info) {
+void PrintMissionInfo(const vector<RobotInfo> &robot_info) {
+  for (const auto &r : robot_info) {
     cout << "robot id: " << r.id << " ";
     if (r.has_mission) {
       if (r.mission.is_internal) {
@@ -26,11 +27,52 @@ void PrintMissionInfo(const vector<RobotInfo>& robot_info) {
     cout << endl;
   }
 }
+
+// Reset remaining plan start time, make it 0.
+void UpdateRemainingPlan(vector<vector<ActionWithTime>> &plan) {
+  int min_start_time = kIntInf;
+  int robot_count = plan.size();
+  for (int i = 0; i < robot_count; i++) {
+    if (plan[i].empty()) {
+      continue;
+    }
+    min_start_time = min(min_start_time, plan[i].front().start_time_ms);
+  }
+
+  for (int i = 0; i < robot_count; i++) {
+    for (ActionWithTime &awt : plan[i]) {
+      awt.start_time_ms -= min_start_time;
+      awt.end_time_ms -= min_start_time;
+    }
+  }
+//  cout << "min start time: " << min_start_time << endl;
+}
+
+void ValidatePlan(const vector<RobotInfo> init_status,
+                  const vector<vector<ActionWithTime>> &plan) {
+  map<Location, IntervalSet> loc_to_intervals;
+  int robot_count = init_status.size();
+  for (int robot_id = 0; robot_id < robot_count; robot_id++) {
+    int start_time = 0;
+    Position pos = init_status[robot_id].pos;
+    for (ActionWithTime awt : plan[robot_id]) {
+      if (awt.action != Action::MOVE) {
+        ApplyActionOnPosition(awt.action, &pos);
+        continue;
+      }
+      loc_to_intervals[pos.loc].AddInterval(start_time, awt.start_time_ms + kBufferDurationMs, robot_id);
+      ApplyActionOnPosition(awt.action, &pos);
+      start_time = awt.end_time_ms;
+    }
+    loc_to_intervals[pos.loc].AddInterval(start_time, robot_id);
+  }
+}
 }
 
 void KsScheduler::AddMission(WmsMission mission) {
   lock_guard<mutex> lock(mutex_io_up_);
-  cout << "received wms mission: from: " << mission.pick_from.loc.to_string()
+  cout << "received wms mission: " << mission.id
+       << " from: " << mission.pick_from.loc.to_string()
        << " to: " << mission.drop_to.loc.to_string()
        << " shelf id: " << mission.shelf_id << endl;
   missions_from_wms_.insert(mission);
@@ -47,7 +89,7 @@ void KsScheduler::Init(KsWmsApi *wms_p, KsSimulatorApi *simulator_p) {
 
   robot_manager_.Init();
 
-  const std::vector<Location>& shelf_storage_points = ks_map_.GetShelfStoragePoints();
+  const std::vector<Location> &shelf_storage_points = ks_map_.GetShelfStoragePoints();
   // The way shelves are initialized.
   for (int i = 0; i < ks_map_.shelf_count_; i++) {
     shelf_manager_.AddMapping(i, shelf_storage_points[i]);
@@ -81,14 +123,24 @@ void KsScheduler::Run() {
     // Make a copy of current state.
     vector<RobotInfo> tmp_robot_info = robot_manager_.GetRobotInfo();
     ShelfManager tmp_shelf_manager(shelf_manager_);
-    action_graph_.Cut(tmp_robot_info, tmp_shelf_manager);
+    vector<vector<ActionWithTime>> remaining_plan(robot_count_);
+    action_graph_.Cut(tmp_robot_info, tmp_shelf_manager, remaining_plan);
+
+    ValidatePlan(tmp_robot_info, remaining_plan);
     mutex_.unlock();
 
     // Do not lock during FindPath()(which can be time consuming).
-    PfResponse resp = sipp_p_->FindPath({tmp_robot_info}, &tmp_shelf_manager);
+    UpdateRemainingPlan(remaining_plan);
+
+    ValidatePlan(tmp_robot_info, remaining_plan);
+
+    PfResponse resp = sipp_p_->FindPath({tmp_robot_info, remaining_plan}, &tmp_shelf_manager);
 
     mutex_.lock();
-    action_graph_.SetPlan(resp.plan);
+
+    ValidatePlan(tmp_robot_info, resp.plan);
+
+    action_graph_.SetPlan(tmp_robot_info, resp.plan);
     mutex_.unlock();
   }
 }
@@ -122,8 +174,10 @@ void KsScheduler::AdgRunner() {
       }
     }
 
-    const std::vector<std::vector<Action>>& commands = action_graph_.GetCommands();
+    const std::vector<std::vector<Action>> &commands = action_graph_.GetCommands(
+        robot_manager_.GetRobotInfo());
     mutex_.unlock();
+
     for (int i = 0; i < robot_count_; i++) {
       if (!commands[i].empty()) {
         simulator_p_->AddActions({i, commands[i]});

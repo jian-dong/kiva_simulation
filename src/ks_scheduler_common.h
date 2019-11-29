@@ -63,6 +63,7 @@ struct RobotInfo {
   bool has_mission;
   Mission mission;
 
+  RobotInfo() = default;
   RobotInfo(int id, Location loc) : id(id) {
     pos = {loc, Direction::NORTH};
     shelf_attached = false;
@@ -81,17 +82,35 @@ struct RobotInfo {
   }
 
   std::string to_string() const {
-    return pos.to_string();
+    return "id: " + std::to_string(id)
+    + " pos: " + pos.to_string()
+    + " has mission: " + std::to_string(has_mission);
+  }
+
+  bool operator==(const RobotInfo& o) const {
+    return id == o.id
+    && pos == o.pos
+    && shelf_attached == o.shelf_attached
+    && has_mission == o.has_mission;
   }
 };
+
+inline void PrintRobotInfo(const std::vector<RobotInfo> &robot_info) {
+  int robot_count = robot_info.size();
+  for (int i = 0; i < robot_count; i++) {
+    std::cout << robot_info[i].to_string() << std::endl;
+  }
+}
 
 // TODO: think if the shelf manager can be updated here.
 inline void ApplyActionOnRobot(Action a, RobotInfo *r) {
   switch (a) {
-    case Action::ATTACH:assert(r->shelf_attached == false);
+    case Action::ATTACH:assert(!r->shelf_attached);
       r->shelf_attached = true;
       break;
-    case Action::DETACH:assert(r->shelf_attached == true);
+    case Action::DETACH:assert(r->shelf_attached);
+      assert(r->has_mission);
+      assert(!r->mission.is_internal);
       r->shelf_attached = false;
       r->has_mission = false;
       break;
@@ -106,23 +125,24 @@ inline void ApplyActionOnRobot(Action a, RobotInfo *r) {
       break;
     default:exit(0);
   }
+  if (r->has_mission && r->mission.is_internal && r->pos.loc == r->mission.internal_mission.to) {
+    r->has_mission = false;
+  }
 }
 
-inline Position ApplyActionOnPosition(Action a, Position p) {
-  Position rtn = p;
+inline void ApplyActionOnPosition(Action a, Position* p) {
   switch (a) {
     case Action::ATTACH:break;
     case Action::DETACH:break;
     case Action::YIELD:break;
-    case Action::MOVE:rtn.loc = rtn.loc + kDirectionToDelta.at(rtn.dir);
+    case Action::MOVE:p->loc = p->loc + kDirectionToDelta.at(p->dir);
       break;
-    case Action::CTURN:rtn.dir = ClockwiseTurn(rtn.dir);
+    case Action::CTURN:p->dir = ClockwiseTurn(p->dir);
       break;
-    case Action::CCTURN:rtn.dir = CounterClockwiseTurn(rtn.dir);
+    case Action::CCTURN:p->dir = CounterClockwiseTurn(p->dir);
       break;
     default:exit(0);
   }
-  return rtn;
 }
 
 struct ActionWithTime {
@@ -139,8 +159,8 @@ struct ActionWithTime {
 
   std::string to_string() const {
     return kActionToString.at(action)
-    + " start: " + std::to_string(start_time_ms)
-    + " end: " + std::to_string(end_time_ms);
+        + " start: " + std::to_string(start_time_ms)
+        + " end: " + std::to_string(end_time_ms);
   }
 };
 
@@ -149,10 +169,10 @@ using ActionWithTimeSeq = std::vector<ActionWithTime>;
 class ShelfManager {
  public:
   ShelfManager() = default;
-  ShelfManager(const ShelfManager& o) {
+  ShelfManager(const ShelfManager &o) {
     loc_to_id_ = o.loc_to_id_;
   }
-  ShelfManager& operator= (const ShelfManager &o) {
+  ShelfManager &operator=(const ShelfManager &o) {
     loc_to_id_.clear();
     loc_to_id_ = o.loc_to_id_;
   }
