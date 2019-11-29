@@ -12,6 +12,15 @@ namespace ks {
 using namespace std;
 
 namespace {
+void PrintPlanSize(const std::vector<ActionWithTimeSeq> &plan) {
+  int robot_count = plan.size();
+  cout << "Plan size: ";
+  for (int i = 0; i < robot_count; i++) {
+    cout << plan[i].size() << " ";
+  }
+  cout << endl;
+}
+
 void PrintMissionInfo(const vector<RobotInfo> &robot_info) {
   for (const auto &r : robot_info) {
     cout << "robot id: " << r.id << " ";
@@ -117,7 +126,7 @@ void KsScheduler::Run() {
     mutex_.lock();
 
     // Assign missions.
-    robot_manager_.AssignMissions(missions_from_wms_);
+    robot_manager_.AssignMissions(missions_from_wms_, action_graph_.GetCurrentPlan());
     mutex_io_up_.unlock();
 
     // Make a copy of current state.
@@ -126,20 +135,16 @@ void KsScheduler::Run() {
     vector<vector<ActionWithTime>> remaining_plan(robot_count_);
     action_graph_.Cut(tmp_robot_info, tmp_shelf_manager, remaining_plan);
 
-    ValidatePlan(tmp_robot_info, remaining_plan);
     mutex_.unlock();
 
     // Do not lock during FindPath()(which can be time consuming).
     UpdateRemainingPlan(remaining_plan);
-
-    ValidatePlan(tmp_robot_info, remaining_plan);
-
     PfResponse resp = sipp_p_->FindPath({tmp_robot_info, remaining_plan}, &tmp_shelf_manager);
 
     mutex_.lock();
 
+//    PrintPlanSize(resp.plan);
     ValidatePlan(tmp_robot_info, resp.plan);
-
     action_graph_.SetPlan(tmp_robot_info, resp.plan);
     mutex_.unlock();
   }
@@ -162,6 +167,7 @@ void KsScheduler::AdgRunner() {
       action_graph_.UpdateRobotStatus(report.robot_id, report.action);
       const auto &rtn = robot_manager_.UpdateRobotStatus(report.robot_id, report.action);
       if (rtn.has_value()) {
+        // TODO: move the update of shelf manager into robot manager update status.
         MissionReport r = rtn.value();
         if (r.type == MissionReportType::PICKUP_DONE) {
           cout << "mission: " << r.mission.id << " pickup done. by robot: " << report.robot_id << endl;
@@ -174,7 +180,7 @@ void KsScheduler::AdgRunner() {
       }
     }
 
-    const std::vector<std::vector<Action>> &commands = action_graph_.GetCommands(
+    std::vector<std::vector<Action>> commands = action_graph_.GetCommands(
         robot_manager_.GetRobotInfo());
     mutex_.unlock();
 

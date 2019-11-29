@@ -82,6 +82,8 @@ class GlobalPlan {
     }
     adj_.Clear();
     target_robot_info_.clear();
+
+    cut_ = false;
   }
 
   GlobalPlan(const GlobalPlan& o) = default;
@@ -97,6 +99,7 @@ class GlobalPlan {
       replied_action_index_[i] = -1;
     }
     target_robot_info_.clear();
+    cut_ = false;
   }
 
   bool Finished(const std::vector<RobotInfo> &robot_info) {
@@ -126,7 +129,7 @@ class GlobalPlan {
            std::vector<ActionWithTimeSeq> &remaining_plan);
   // This function may be called on the next plan multiple times.
   void SetPlan(std::vector<RobotInfo> init_robot_info, const std::vector<ActionWithTimeSeq> &plan);
-
+  ActionPlan GetCurrentPlan();
   const int robot_count_;
   // Initialized to 0, when this value is equal to the action count, all the actions are sent.
   std::vector<int> to_send_action_index_;
@@ -139,6 +142,12 @@ class GlobalPlan {
 
   std::vector<std::vector<ActionWithTime>> plan_;
   TwoWayAdjList adj_;
+
+  // Cached data for cut.
+  bool cut_;
+  std::vector<RobotInfo> cached_robot_info_;
+  ShelfManager cached_shelf_manager_;
+  std::vector<ActionWithTimeSeq> cached_remaining_plan_;
 };
 
 class KsActionGraph {
@@ -154,6 +163,9 @@ class KsActionGraph {
            ShelfManager &shelf_manager,
            std::vector<ActionWithTimeSeq> &remaining_plan);
   void SetPlan(const std::vector<RobotInfo> &prev_robot_info, const std::vector<ActionWithTimeSeq> &plan);
+  // Returns the to acknowledge and to send part of the current plan.
+  // The initial status of all robots corresponds to this plan is available in robot manager.
+  ActionPlan GetCurrentPlan();
   void UpdateRobotStatus(int robot_id, Action a);
   std::vector<std::vector<Action>> GetCommands(const std::vector<RobotInfo> &robot_info);
 

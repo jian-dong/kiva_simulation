@@ -86,9 +86,9 @@ std::vector<std::pair<State, ActionWithTime>> SippAstar::GenSuccessors(const Sta
     int action_duration = GetActionCostInTime(a);
     int arrival_time_start = cur_state.stp.time_ms + action_duration;
     // May change the way to calculate end time to add a safe interval.
-    int arrival_time_end = GetSafeInterval(cur_state.stp).end_ms
+    int arrival_time_end = GetSafeInterval(cur_state.stp).end_ms - kBufferDurationMs
         + action_duration;
-    assert(arrival_time_start < arrival_time_end);
+    assert(arrival_time_start <= arrival_time_end);
     for (int i = 0; i < safe_intervals_.at(new_pos.loc).Size(); i++) {
       const Interval &interval = safe_intervals_.at(new_pos.loc).Get(i);
       if (interval.DoesNotIntersect(arrival_time_start, arrival_time_end)) {

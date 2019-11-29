@@ -84,7 +84,7 @@ class SippAstar {
  public:
   SippAstar(const KsMap &ks_map,
             const std::map<Location, IntervalSeq> &safe_intervals,
-            ShelfManager *shelf_manager_p)
+            const ShelfManager *shelf_manager_p)
       : map_(ks_map), safe_intervals_(safe_intervals), shelf_manager_p_(shelf_manager_p) {
   };
 
@@ -99,7 +99,7 @@ class SippAstar {
   Interval GetSafeInterval(SpatioTemporalPoint stp);
 
   const KsMap &map_;
-  ShelfManager *shelf_manager_p_;
+  const ShelfManager *shelf_manager_p_;
   const std::map<Location, IntervalSeq> &safe_intervals_;
 
   std::set<SpatioTemporalPoint> closed_;

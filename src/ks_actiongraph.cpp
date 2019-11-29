@@ -34,10 +34,12 @@ void KsActionGraph::UpdateRobotStatus(int robot_id, Action a) {
 vector<vector<Action>> KsActionGraph::GetCommands(const std::vector<RobotInfo> &robot_info) {
   if (!cur_plan_p_->plan_set_) {
     // For the case that both current and next plan are not set.
+//    cout << "swap plan 1" << endl;
     swap(cur_plan_p_, next_plan_p_);
   } else {
     if (cur_plan_p_->Finished(robot_info)) {
       cur_plan_p_->Clear();
+//      cout << "current plan finished, swap plan 2" << endl;
       swap(cur_plan_p_, next_plan_p_);
     }
   }
@@ -49,18 +51,36 @@ vector<vector<Action>> KsActionGraph::GetCommands(const std::vector<RobotInfo> &
   return rtn;
 }
 
+ActionPlan KsActionGraph::GetCurrentPlan() {
+  return cur_plan_p_->GetCurrentPlan();
+}
+
 void GlobalPlan::Cut(vector<RobotInfo> &robot_info,
                      ShelfManager &shelf_manager,
                      vector<ActionWithTimeSeq> &remaining_plan) {
-  for (int i = 0; i < robot_count_; i++) {
-    for (int j = to_send_action_index_[i]; j < (int)plan_[i].size(); j++) {
-      remaining_plan[i].push_back(plan_[i][j]);
-    }
-    plan_[i].resize(to_send_action_index_[i]);
+  if (cut_) {
+    robot_info = cached_robot_info_;
+    shelf_manager = cached_shelf_manager_;
+    remaining_plan = cached_remaining_plan_;
+    return;
+  } else {
+    cut_ = true;
   }
 
+//  cout << "One call of cut, push count: " << endl;
+  for (int i = 0; i < robot_count_; i++) {
+    for (int j = to_send_action_index_[i]; j < ((int)plan_[i].size()); j++) {
+      remaining_plan[i].push_back(plan_[i][j]);
+    }
+//    plan_[i].resize(to_send_action_index_[i]);
+//    cout << (((int)plan_[i].size()) - to_send_action_index_[i]) << " ";
+    plan_[i].erase(plan_[i].begin() + to_send_action_index_[i], plan_[i].end());
+  }
+//  cout << endl;
+
   for (int robot_id = 0; robot_id < robot_count_; robot_id++) {
-    for (int j = replied_action_index_[robot_id] + 1; j < to_send_action_index_[robot_id]; j++) {
+    for (int j = replied_action_index_[robot_id] + 1; j < (int)to_send_action_index_[robot_id]; j++) {
+      assert(((int)plan_[robot_id].size()) == ((int)to_send_action_index_[robot_id]));
       Action a = plan_[robot_id][j].action;
       ApplyActionOnRobot(a, &(robot_info[robot_id]));
       if (a == Action::ATTACH) {
@@ -74,6 +94,10 @@ void GlobalPlan::Cut(vector<RobotInfo> &robot_info,
   }
 
   target_robot_info_ = robot_info;
+
+  cached_robot_info_ = robot_info;
+  cached_shelf_manager_ = shelf_manager;
+  cached_remaining_plan_ = remaining_plan;
 }
 
 void GlobalPlan::SetPlan(vector<RobotInfo> init_robot_info, const vector<ActionWithTimeSeq> &plan) {
@@ -131,6 +155,16 @@ void GlobalPlan::UpdateRobotStatus(int robot_id, Action a) {
   assert(plan_[robot_id][replied_action_index_[robot_id] + 1].action == a);
   replied_action_index_[robot_id]++;
   adj_.RemoveAllEdgesFrom({robot_id, replied_action_index_[robot_id]});
+}
+
+ActionPlan GlobalPlan::GetCurrentPlan() {
+  ActionPlan rtn(robot_count_);
+  for (int i = 0; i < robot_count_; i++) {
+    for (int j = replied_action_index_[i] + 1; j < (int)plan_[i].size(); j++) {
+      rtn[i].push_back(plan_[i][j]);
+    }
+  }
+  return rtn;
 }
 
 }

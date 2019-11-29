@@ -19,6 +19,7 @@ struct Mission {
   bool is_internal;
   WmsMission wms_mission;
   InternalMission internal_mission;
+
   Mission() = default;
   explicit Mission(WmsMission wms_mission) : wms_mission(wms_mission), is_internal(false) {};
   explicit Mission(InternalMission internal_mission) : internal_mission(internal_mission), is_internal(true) {};
@@ -157,7 +158,7 @@ struct ActionWithTime {
       : action(action), start_time_ms(start_time_ms), end_time_ms(end_time_ms),
         start_pos(start_pos), end_pos(end_pos) {};
 
-  std::string to_string() const {
+  [[nodiscard]] std::string to_string() const {
     return kActionToString.at(action)
         + " start: " + std::to_string(start_time_ms)
         + " end: " + std::to_string(end_time_ms);
@@ -165,6 +166,7 @@ struct ActionWithTime {
 };
 
 using ActionWithTimeSeq = std::vector<ActionWithTime>;
+using ActionPlan = std::vector<std::vector<ActionWithTime>>;
 
 class ShelfManager {
  public:
@@ -190,7 +192,7 @@ class ShelfManager {
     loc_to_id_.erase(loc);
   }
 
-  bool HasShelf(Location loc) {
+  [[nodiscard]] bool HasShelf(Location loc) const {
     return loc_to_id_.find(loc) != loc_to_id_.end();
   }
 

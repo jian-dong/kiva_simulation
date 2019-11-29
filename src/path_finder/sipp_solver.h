@@ -164,6 +164,24 @@ class IntervalSeq {
     return rtn;
   }
 
+  bool Unused() {
+    if (intervals_.size() == 1 && intervals_[0].start_ms == 0 && intervals_[0].end_ms == kIntInf) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
+  bool AllUsed() {
+    return intervals_.empty();
+  }
+
+  void Reset() {
+    intervals_.clear();
+    intervals_.emplace_back(0, kIntInf);
+    unsafe_intervals_.clear();
+  }
+
  private:
   void SanityCheck() const {
     for (int i = 0; i < ((int) intervals_.size() - 1); i++) {

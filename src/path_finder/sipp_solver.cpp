@@ -14,7 +14,7 @@ void AppendToVector(const vector<T> &from, vector<T> *to) {
   to->insert(to->end(), from.begin(), from.end());
 }
 
-void PrintActionSequence(const ActionWithTimeSeq & as) {
+void PrintActionSequence(const ActionWithTimeSeq &as) {
   cout << "Actions: ";
   for (ActionWithTime a : as) {
     cout << a.to_string() << " ";
@@ -37,6 +37,25 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
     // If prev_plan is empty, then the whole interval will be removed.
     // If prev_plan is not empty, remove intervals according to the plan.
     UpdateSafeIntervalsWithActions(0, req.robots[i].pos, req.prev_plan[i], i);
+
+    // For robots with a mission but without a plan.
+    if (req.prev_plan[i].empty() && req.robots[i].has_mission) {
+      const Mission &m = req.robots[i].mission;
+      if (m.is_internal) {
+        assert(safe_intervals_[m.internal_mission.to].Unused());
+        safe_intervals_[m.internal_mission.to].Clear();
+      } else {
+        if (req.robots[i].pos.loc == m.wms_mission.pick_from.loc
+            || safe_intervals_[m.wms_mission.pick_from.loc].Unused()) {
+          // Do nothing.
+        } else {
+          assert(false);
+        }
+        safe_intervals_[m.wms_mission.pick_from.loc].Clear();
+        assert(safe_intervals_[m.wms_mission.drop_to.loc].Unused());
+        safe_intervals_[m.wms_mission.drop_to.loc].Clear();
+      }
+    }
   }
 
   // 2. For each robot, plan a route.
@@ -51,12 +70,26 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
       // The robot has unfinished plans.
       continue;
     }
-    safe_intervals_[robot.pos.loc] = IntervalSeq();
+
+    // Enable intervals.
+    const Mission &m = robot.mission;
+    if (m.is_internal) {
+      assert(safe_intervals_[m.internal_mission.to].AllUsed());
+      safe_intervals_[m.internal_mission.to].Reset();
+    } else {
+      assert(safe_intervals_[m.wms_mission.pick_from.loc].AllUsed());
+      safe_intervals_[m.wms_mission.pick_from.loc].Reset();
+      assert(safe_intervals_[m.wms_mission.drop_to.loc].AllUsed());
+      safe_intervals_[m.wms_mission.drop_to.loc].Reset();
+    }
+    safe_intervals_[robot.pos.loc].Reset();
 
     if (robot.mission.is_internal) {
       PlanInternalMission(robot, &rtn.plan[robot_id]);
 //      PrintActionSequence(rtn.plan[robot_id]);
+      cout << "Planning for robot " << robot_id << " and internal mission." << endl;
     } else {
+      cout << "Planning for robot " << robot_id << " and mission " << m.wms_mission.id << endl;
       PlanWmsMission(robot, &rtn.plan[robot_id]);
     }
   }
@@ -65,7 +98,6 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
 }
 
 void SippSolver::PlanInternalMission(const RobotInfo &robot, ActionWithTimeSeq *rtn) {
-//  cout << "from: " << robot.pos.loc.to_string() << " to: " << robot.mission.internal_mission.to.to_string();
   SippAstar astar(map_, safe_intervals_, shelf_manager_p_);
   const auto &new_actions = astar.GetActions(0, false, robot.pos,
                                              robot.mission.internal_mission.to);
@@ -77,25 +109,41 @@ void SippSolver::PlanWmsMission(const RobotInfo &robot, ActionWithTimeSeq *rtn) 
   int end_time_ms = 0;
   Position end_pos = robot.pos;
 
-  bool shelf_attached = robot.shelf_attached;
-  Position from = robot.pos;
-  Location to;
-  if (shelf_attached) {
-    to = robot.mission.wms_mission.drop_to.loc;
-  } else {
-    to = robot.mission.wms_mission.pick_from.loc;
+  if (!robot.shelf_attached) {
+    // Plan for the first half.
+    SippAstar astar(map_, safe_intervals_, shelf_manager_p_);
+    const auto first_half_actions = astar.GetActions(
+        0, false, robot.pos, robot.mission.wms_mission.pick_from.loc);
+    AppendToVector(first_half_actions, rtn);
+
+    if (!first_half_actions.empty()) {
+      end_time_ms = first_half_actions.back().end_time_ms;
+      end_pos = first_half_actions.back().end_pos;
+    }
+    rtn->push_back({Action::ATTACH,
+                    end_time_ms,
+                    end_time_ms + GetActionCostInTime(Action::ATTACH),
+                    end_pos,
+                    end_pos});
+    shelf_manager_p_->RemoveMapping(robot.mission.wms_mission.shelf_id,
+                                    robot.mission.wms_mission.pick_from.loc);
+
+    end_time_ms = rtn->back().end_time_ms;
   }
 
-  SippAstar astar(map_, safe_intervals_, shelf_manager_p_);
-  const auto new_actions = astar.GetActions(0, shelf_attached, from, to);
-  AppendToVector(new_actions, rtn);
 
-  if (!new_actions.empty()) {
-    end_time_ms = new_actions.back().end_time_ms;
-    end_pos = new_actions.back().end_pos;
-  }
+  {
+    // Plan for the second half.
+    SippAstar astar(map_, safe_intervals_, shelf_manager_p_);
+    const auto second_half_actions = astar.GetActions(
+        end_time_ms, true, end_pos, robot.mission.wms_mission.drop_to.loc);
+    AppendToVector(second_half_actions, rtn);
 
-  if (shelf_attached) {
+    if (!second_half_actions.empty()) {
+      end_time_ms = second_half_actions.back().end_time_ms;
+      end_pos = second_half_actions.back().end_pos;
+    }
+
     rtn->push_back({Action::DETACH,
                     end_time_ms,
                     end_time_ms + GetActionCostInTime(Action::DETACH),
@@ -103,14 +151,6 @@ void SippSolver::PlanWmsMission(const RobotInfo &robot, ActionWithTimeSeq *rtn) 
                     end_pos});
     shelf_manager_p_->AddMapping(robot.mission.wms_mission.shelf_id,
                                  robot.mission.wms_mission.drop_to.loc);
-  } else {
-    rtn->push_back({Action::ATTACH,
-                      end_time_ms,
-                      end_time_ms + GetActionCostInTime(Action::ATTACH),
-                      end_pos,
-                      end_pos});
-    shelf_manager_p_->RemoveMapping(robot.mission.wms_mission.shelf_id,
-                                    robot.mission.wms_mission.pick_from.loc);
   }
   UpdateSafeIntervalsWithActions(0, robot.pos, *rtn, robot.id);
 }

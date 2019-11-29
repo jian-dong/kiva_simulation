@@ -40,11 +40,20 @@ std::optional<MissionReport> KsRobotManager::UpdateRobotStatus(int robot_id, Act
   }
 }
 
-void KsRobotManager::AssignMissions(std::set<WmsMission> &missions) {
+void KsRobotManager::AssignMissions(std::set<WmsMission> &missions, const ActionPlan &cur_plan) {
+  set<Location> used_locations;
+  for (int i = 0; i < robot_count_; i++) {
+    for (ActionWithTime a : cur_plan[i]) {
+      assert(robot_info_[i].has_mission);
+      used_locations.insert(a.start_pos.loc);
+      used_locations.insert(a.end_pos.loc);
+    }
+  }
+
   auto mission_it = missions.begin();
   while (mission_it != missions.end()) {
     WmsMission to_assign = *mission_it;
-    if (!IsMissionValid(to_assign)) {
+    if (!IsMissionValid(to_assign, used_locations)) {
       mission_it++;
       continue;
     }
@@ -57,7 +66,7 @@ void KsRobotManager::AssignMissions(std::set<WmsMission> &missions) {
       picked_robot->has_mission = true;
       picked_robot->mission.is_internal = false;
       picked_robot->mission.wms_mission = to_assign;
-
+//      cout << "Assign mission " << to_assign.id << " to robot: " << picked_robot->id << endl;
       mission_it = missions.erase(mission_it);
     } else {
       break;
@@ -110,9 +119,16 @@ RobotInfo *KsRobotManager::GetClosestIdleRobot(Location loc) {
   return picked_robot;
 }
 
-bool KsRobotManager::IsMissionValid(const WmsMission &mission) {
+bool KsRobotManager::IsMissionValid(const WmsMission &mission, const set<Location> &used_locations) {
   const Location& pickup_loc = mission.pick_from.loc;
   const Location& dropdown_loc = mission.drop_to.loc;
+  if (used_locations.find(pickup_loc) != used_locations.end()) {
+    return false;
+  }
+  if (used_locations.find(dropdown_loc) != used_locations.end()) {
+    return false;
+  }
+
   for (const RobotInfo& r : robot_info_) {
     if (!r.has_mission) {
       continue;

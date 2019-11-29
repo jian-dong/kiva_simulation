@@ -12,6 +12,7 @@ CANVAS_WIDTH = 1100
 HALF_WIDTH = 5
 CANVAS_SHIFT = 16
 SCALING_FACTOR = 10
+MAP_FILE_NAME = "../data/map_1.map"
 
 # Data related constants.
 X_LEN = 0
@@ -147,7 +148,7 @@ class ObjManager(object):
         self.robots = [Robot(canvas) for x in range(ROBOT_COUNT)]
 
     def load_map(self):
-        map_file = open("../data/map_2.map", "r")
+        map_file = open(MAP_FILE_NAME, "r")
 
         list_of_lines = []
         for raw_line in map_file:
