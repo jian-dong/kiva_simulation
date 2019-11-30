@@ -33,7 +33,6 @@ class KsScheduler : public KsSchedulerApi {
   void ReportActionDone(CommandReport r) override;
 
  private:
-
   const int robot_count_;
   const KsMap& ks_map_;
   KsWmsApi* wms_p_;
@@ -43,8 +42,7 @@ class KsScheduler : public KsSchedulerApi {
   std::set<WmsMission> missions_from_wms_;
 
   std::mutex mutex_io_down_;
-  // Contains actions that robots had finished.
-  std::queue<CommandReport> robot_reports_;
+  std::queue<CommandReport> mq_from_simulator_;
 
   std::mutex mutex_;
   // Maintain robot status and the action dependency graph, the two data structures below should

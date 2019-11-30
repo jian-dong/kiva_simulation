@@ -13,7 +13,7 @@ namespace ks {
 const char * const kMapFilePath = "../data/map_1.map";
 
 // WMS related.
-const int kPendingMoveToOperationMissionLimit = 300; // 400
+const int kPendingMoveToOperationMissionLimit = 400; // 400
 const int kMissionGenerationIntervalMs = 3000;
 const int kMinOperationTimeS = 20;
 const int kMoveOutProb = 20;
@@ -26,9 +26,6 @@ const int kUpdateIntervalMs = 300;
 const char kShelfOperationPoint = 'P';
 const char kShelfStoragePoint = 'S';
 const char kRestArea = 'R';
-// Storage capability.
-const int kXLimit = 120;
-const int kYLimit = 120;
 
 // SIPP related.
 const double kDoubleInf = DBL_MAX / 2;

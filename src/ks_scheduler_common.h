@@ -1,8 +1,6 @@
 #ifndef KIVA_SIMULATION_SRC_KS_SCHEDULER_COMMON_H_
 #define KIVA_SIMULATION_SRC_KS_SCHEDULER_COMMON_H_
 
-#include <mutex>
-
 #include <iostream>
 
 #include "constants.h"
@@ -24,6 +22,17 @@ struct Mission {
   explicit Mission(WmsMission wms_mission) : wms_mission(wms_mission), is_internal(false) {};
   explicit Mission(InternalMission internal_mission) : internal_mission(internal_mission), is_internal(true) {};
   Mission &operator=(const Mission &o) = default;
+
+  bool operator==(const Mission &o) const {
+    if (is_internal != o.is_internal) {
+      return false;
+    }
+    if (is_internal) {
+      return internal_mission.to == o.internal_mission.to;
+    } else {
+      return wms_mission.id == o.wms_mission.id;
+    }
+  }
 };
 
 struct Position {
@@ -49,7 +58,7 @@ struct Position {
     return !operator==(o);
   }
 
-  std::string to_string() const {
+  [[nodiscard]] std::string to_string() const {
     return loc.to_string() + " " + kDirectionToString.at(dir);
   }
 };
@@ -58,9 +67,6 @@ struct RobotInfo {
   int id;
   Position pos;
   bool shelf_attached;
-
-  // When has_mission is false, and report_mission_done is true, the robot has
-  // finished the mission, and the scheduler needs to update this to wms.
   bool has_mission;
   Mission mission;
 
@@ -92,28 +98,82 @@ struct RobotInfo {
     return id == o.id
     && pos == o.pos
     && shelf_attached == o.shelf_attached
-    && has_mission == o.has_mission;
+    && has_mission == o.has_mission
+    && mission == o.mission;
   }
 };
 
-inline void PrintRobotInfo(const std::vector<RobotInfo> &robot_info) {
-  int robot_count = robot_info.size();
-  for (int i = 0; i < robot_count; i++) {
-    std::cout << robot_info[i].to_string() << std::endl;
-  }
-}
+struct ActionWithTime {
+  Action action;
+  int start_time_ms;
+  int end_time_ms;
+  Position start_pos;
+  Position end_pos;
 
-// TODO: think if the shelf manager can be updated here.
-inline void ApplyActionOnRobot(Action a, RobotInfo *r) {
+  ActionWithTime() = default;
+  ActionWithTime(Action action, int start_time_ms, int end_time_ms, Position start_pos, Position end_pos)
+      : action(action), start_time_ms(start_time_ms), end_time_ms(end_time_ms),
+        start_pos(start_pos), end_pos(end_pos) {};
+
+  [[nodiscard]] std::string to_string() const {
+    return kActionToString.at(action)
+        + " start: " + std::to_string(start_time_ms)
+        + " end: " + std::to_string(end_time_ms);
+  }
+};
+
+using ActionWithTimeSeq = std::vector<ActionWithTime>;
+using ActionPlan = std::vector<ActionWithTimeSeq>;
+
+class ShelfManager {
+ public:
+  ShelfManager() = default;
+  ShelfManager(const ShelfManager &o) {
+    loc_to_id_ = o.loc_to_id_;
+  }
+  ShelfManager &operator=(const ShelfManager &o) {
+    loc_to_id_ = o.loc_to_id_;
+  }
+
+  void AddMapping(int shelf_id, Location loc) {
+    assert(loc_to_id_.find(loc) == loc_to_id_.end());
+    loc_to_id_[loc] = shelf_id;
+  }
+
+  void RemoveMapping(int shelf_id, Location loc) {
+    assert(loc_to_id_.find(loc) != loc_to_id_.end());
+    assert(loc_to_id_[loc] == shelf_id);
+    loc_to_id_.erase(loc);
+  }
+
+  [[nodiscard]] bool HasShelf(Location loc) const {
+    return loc_to_id_.find(loc) != loc_to_id_.end();
+  }
+
+  std::map<Location, int> loc_to_id_;
+};
+
+// Helper functions.
+inline void ApplyActionOnRobot(Action a, RobotInfo *r, ShelfManager* sm) {
   switch (a) {
     case Action::ATTACH:assert(!r->shelf_attached);
+      assert(r->has_mission);
+      assert(!r->mission.is_internal);
       r->shelf_attached = true;
+      if (sm != nullptr) {
+        sm->RemoveMapping(r->mission.wms_mission.shelf_id,
+                          r->mission.wms_mission.pick_from.loc);
+      }
       break;
     case Action::DETACH:assert(r->shelf_attached);
       assert(r->has_mission);
       assert(!r->mission.is_internal);
       r->shelf_attached = false;
       r->has_mission = false;
+      if (sm != nullptr) {
+        sm->AddMapping(r->mission.wms_mission.shelf_id,
+                          r->mission.wms_mission.drop_to.loc);
+      }
       break;
     case Action::YIELD:
       // Yield is effectively a WAIT operation in the MAPF setting. Do nothing.
@@ -146,58 +206,12 @@ inline void ApplyActionOnPosition(Action a, Position* p) {
   }
 }
 
-struct ActionWithTime {
-  Action action;
-  int start_time_ms;
-  int end_time_ms;
-  Position start_pos;
-  Position end_pos;
-
-  ActionWithTime() = default;
-  ActionWithTime(Action action, int start_time_ms, int end_time_ms, Position start_pos, Position end_pos)
-      : action(action), start_time_ms(start_time_ms), end_time_ms(end_time_ms),
-        start_pos(start_pos), end_pos(end_pos) {};
-
-  [[nodiscard]] std::string to_string() const {
-    return kActionToString.at(action)
-        + " start: " + std::to_string(start_time_ms)
-        + " end: " + std::to_string(end_time_ms);
+// Debug helpers.
+inline void PrintRobotInfo(const std::vector<RobotInfo> &robot_info) {
+  int robot_count = robot_info.size();
+  for (int i = 0; i < robot_count; i++) {
+    std::cout << robot_info[i].to_string() << std::endl;
   }
-};
-
-using ActionWithTimeSeq = std::vector<ActionWithTime>;
-using ActionPlan = std::vector<std::vector<ActionWithTime>>;
-
-class ShelfManager {
- public:
-  ShelfManager() = default;
-  ShelfManager(const ShelfManager &o) {
-    loc_to_id_ = o.loc_to_id_;
-  }
-  ShelfManager &operator=(const ShelfManager &o) {
-    loc_to_id_.clear();
-    loc_to_id_ = o.loc_to_id_;
-  }
-
-  void AddMapping(int shelf_id, Location loc) {
-//    std::cout << "Add mapping: shelf id: " << shelf_id << " location: " << loc.to_string() << std::endl;
-    assert(loc_to_id_.find(loc) == loc_to_id_.end());
-    loc_to_id_[loc] = shelf_id;
-  }
-
-  void RemoveMapping(int shelf_id, Location loc) {
-//    std::cout << "Remove mapping: shelf id: " << shelf_id << " location: " << loc.to_string() << std::endl;
-    assert(loc_to_id_.find(loc) != loc_to_id_.end());
-    assert(loc_to_id_[loc] == shelf_id);
-    loc_to_id_.erase(loc);
-  }
-
-  [[nodiscard]] bool HasShelf(Location loc) const {
-    return loc_to_id_.find(loc) != loc_to_id_.end();
-  }
-
-  std::map<Location, int> loc_to_id_;
-};
-
+}
 }
 #endif

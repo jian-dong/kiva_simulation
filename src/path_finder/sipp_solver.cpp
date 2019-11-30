@@ -86,10 +86,7 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
 
     if (robot.mission.is_internal) {
       PlanInternalMission(robot, &rtn.plan[robot_id]);
-//      PrintActionSequence(rtn.plan[robot_id]);
-      cout << "Planning for robot " << robot_id << " and internal mission." << endl;
     } else {
-      cout << "Planning for robot " << robot_id << " and mission " << m.wms_mission.id << endl;
       PlanWmsMission(robot, &rtn.plan[robot_id]);
     }
   }

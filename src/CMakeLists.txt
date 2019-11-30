@@ -93,17 +93,17 @@ target_link_libraries(
     pthread
 )
 
-add_executable(
-    actiongraph_test
-
-    ks_actiongraph_test.cpp
-)
-
-target_link_libraries(
-    actiongraph_test
-
-    ks
-    gmock
-    gtest
-    pthread
-)
+#add_executable(
+#    actiongraph_test
+#
+#    ks_actiongraph_test.cpp
+#)
+#
+#target_link_libraries(
+#    actiongraph_test
+#
+#    ks
+#    gmock
+#    gtest
+#    pthread
+#)

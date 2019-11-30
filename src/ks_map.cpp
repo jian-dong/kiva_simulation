@@ -4,6 +4,8 @@
 #include <iostream>
 #include <vector>
 
+#include "constants.h"
+
 namespace ks {
 using namespace std;
 
@@ -25,14 +27,14 @@ KsMap::KsMap(std::string file_name) {
   }
   input.close();
 
-  actual_x_limit_ = atoi(buffer[0].c_str());
-  actual_y_limit_ = atoi(buffer[1].c_str());
+  x_limit_ = atoi(buffer[0].c_str());
+  y_limit_ = atoi(buffer[1].c_str());
   robot_count_ = atoi(buffer[2].c_str());
   shelf_count_ = atoi(buffer[3].c_str());
   buffer.erase(buffer.begin(), buffer.begin() + 4);
 
-  for (int x = 0; x < actual_x_limit_; x++) {
-    for (int y = 0; y < actual_y_limit_; y++) {
+  for (int x = 0; x < x_limit_; x++) {
+    for (int y = 0; y < y_limit_; y++) {
       map_[x][y] = buffer[x][y];
 
       if (map_[x][y] == kShelfOperationPoint) {
@@ -64,7 +66,7 @@ const std::vector<Location> &KsMap::GetPassableLocations() const {
 
 bool KsMap::IsLocationPassable(const Location &loc) const {
   int x = loc.x, y = loc.y;
-  if (x < 0 || x >= actual_x_limit_ || y < 0 || y >= actual_y_limit_) {
+  if (x < 0 || x >= x_limit_ || y < 0 || y >= y_limit_) {
     return false;
   }
   return map_[x][y] != 'B' && map_[x][y] != 'O' && map_[x][y] != 'T';

@@ -110,7 +110,7 @@ void KsWms::GenOpToSpMissions() {
         const OperationPointInfo &from = op_info;
         auto to_or_empty = ReserviorSampling(storage_point_info_, &StoragePointInfo::CapableForMoveIn);
         if (!to_or_empty.has_value()) {
-          // TODO: this should not happen.
+          LogFatal("More shelf than storage points.");
           break;
         }
         const StoragePointInfo to = to_or_empty.value();

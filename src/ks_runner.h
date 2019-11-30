@@ -3,9 +3,6 @@
 
 #include "interface/ks_api.h"
 #include "ks_map.h"
-#include "ks_scheduler.h"
-#include "ks_simulator.h"
-#include "ks_wms.h"
 
 namespace ks {
 

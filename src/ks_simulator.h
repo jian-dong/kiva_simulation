@@ -53,26 +53,26 @@ inline LocationDouble operator-(const LocationDouble& p, const std::pair<int, in
 
 
 struct ActionProgress {
-  // TODO: change single action to action group in the future, to simulate accelation etc.
+  // TODO: change single action to action group in the future, to simulate acceleration etc.
   Action action;
   TimePoint start_time;
   TimePoint end_time;
 
-  ActionProgress(Action a) : action(a) {
+  explicit ActionProgress(Action a) : action(a) {
     start_time = kEpoch;
     end_time = kEpoch;
   };
 
-  bool Started() {
+  [[nodiscard]] bool Started() const {
     return start_time != kEpoch;
   }
 
-  bool Finished() {
+  [[nodiscard]] bool Finished() const {
     return Started() && (end_time < GetCurrentTime());
   }
 
   // Return progress, a double in [0, 1].
-  double GetProgress(TimePoint cur) const {
+  [[nodiscard]] double GetProgress(TimePoint cur) const {
     return ((double)(cur - start_time).count()) / ((double)(end_time - start_time).count());
   }
 };
@@ -94,10 +94,10 @@ struct RobotStatus {
 
   std::queue<ActionProgress> pending_actions;
 
-  RobotStatus() = default;
   RobotStatus(int id, Location loc) : id(id), loc(loc) {
     dir = Direction::NORTH;
     shelf_attached = false;
+    shelf_id = -1;
   }
 
   OutputRobotStatus OutputStatus(const TimePoint &cur_time) {
@@ -107,7 +107,6 @@ struct RobotStatus {
     if (!pending_actions.empty()) {
       const ActionProgress& p = pending_actions.front();
       double progress = p.GetProgress(cur_time);
-//      std::cout << "current progress: " << DoubleToString(progress) << std::endl;
       if (p.action == Action::MOVE) {
         const auto& delta = kDirectionToDelta.at(dir);
         x_modifier = delta.first * progress;
@@ -133,14 +132,14 @@ class KsSimulator : public KsSimulatorApi {
   void Init(KsSchedulerApi *scheduler_p, const KsMap &ks_map);
   void Run();
 
-  void AddActions(Command action_seq) override;
+  void AddActions(Command command) override;
 
  private:
-  void UpdateWithAction(RobotStatus &r, Action a);
+  void UpdateRobotStatusWithAction(Action a, RobotStatus *r);
   void RedisSet(const std::string &key, const std::string &value);
   void SanityCheck();
 
-  // IO related fields. Once a message queue
+  // IO related fields.
   std::mutex mutex_io_;
   std::queue<Command> mq_from_scheduler_;
 

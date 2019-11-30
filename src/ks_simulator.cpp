@@ -47,15 +47,15 @@ void KsSimulator::Init(KsSchedulerApi *scheduler_p, const KsMap &ks_map) {
 
   redis_ = redisConnect(kRedisHostname, kRedisPort);
   if (redis_ == nullptr || redis_->err) {
-    LogFatal("Failed to connect to redis");
+    LogFatal("Failed to connect to redis.");
   }
 
   robot_status_sanity_check_.resize(robot_count_);
 }
 
-void KsSimulator::AddActions(Command action_seq) {
+void KsSimulator::AddActions(Command command) {
   lock_guard<mutex> lock(mutex_io_);
-  mq_from_scheduler_.push(action_seq);
+  mq_from_scheduler_.push(command);
 }
 
 void KsSimulator::Run() {
@@ -63,29 +63,27 @@ void KsSimulator::Run() {
     mutex_io_.lock();
 
     while (!mq_from_scheduler_.empty()) {
-      const Command command = mq_from_scheduler_.front();
-      mq_from_scheduler_.pop();
-      for (const auto& a : command.actions) {
-//        cout << "current action: " << kActionToString.at(a) << endl;
+      const Command& command = mq_from_scheduler_.front();
+      for (const auto& action : command.actions) {
         TimePoint prev_action_finish_time = kEpoch;
         if (!robot_status_[command.robot_id].pending_actions.empty()) {
           prev_action_finish_time = robot_status_[command.robot_id].pending_actions.back().end_time;
         }
-        ActionProgress p(a);
-        p.start_time = prev_action_finish_time == kEpoch ? GetCurrentTime() : prev_action_finish_time;
-        milliseconds tmp_duration = GetActionDuration(a);
-        p.end_time = p.start_time + tmp_duration;
-        robot_status_[command.robot_id].pending_actions.push(p);
+        ActionProgress progress(action);
+        progress.start_time = prev_action_finish_time == kEpoch ? GetCurrentTime() : prev_action_finish_time;
+        progress.end_time = progress.start_time + GetActionDuration(action);
+        robot_status_[command.robot_id].pending_actions.push(progress);
       }
+      mq_from_scheduler_.pop();
     }
     mutex_io_.unlock();
 
-    // Process each robot, report actions done.
+    // Process each robot, report if an action is finished.
     for (RobotStatus& r : robot_status_) {
       while (!r.pending_actions.empty()) {
         if (r.pending_actions.front().Finished()) {
           scheduler_p_->ReportActionDone({r.id, r.pending_actions.front().action});
-          UpdateWithAction(r, r.pending_actions.front().action);
+          UpdateRobotStatusWithAction(r.pending_actions.front().action, &r);
           r.pending_actions.pop();
         } else {
           break;
@@ -106,16 +104,10 @@ void KsSimulator::Run() {
       sstream << loc.x << " " << loc.y << " ";
     }
 
-    string to_set = sstream.str();
-    std::time_t now = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now());
-//    cout << "current time: " << ctime(&now);
-//    cout << "string to set: " << to_set << endl;
-
     auto redis_start = std::chrono::system_clock::now();
-
     RedisSet(kRedisKey, sstream.str());
-
     auto redis_end = std::chrono::system_clock::now();
+
     std::chrono::duration<double> elapsed_seconds = redis_end - redis_start;
 //    std::cout << "Redis set elapsed time: " << elapsed_seconds.count() << "s\n";
 
@@ -124,31 +116,31 @@ void KsSimulator::Run() {
   }
 }
 
-void KsSimulator::UpdateWithAction(RobotStatus &r, Action a) {
+void KsSimulator::UpdateRobotStatusWithAction(Action a, RobotStatus *r) {
   switch (a) {
     case Action::ATTACH:
-      assert(shelf_id_to_loc_[loc_to_shelf_id_.at(r.loc.GetLocation())] == r.loc.GetLocation());
-      r.shelf_attached = true;
-      r.shelf_id = loc_to_shelf_id_.at(r.loc.GetLocation());
+      assert(shelf_id_to_loc_[loc_to_shelf_id_.at(r->loc.GetLocation())] == r->loc.GetLocation());
+      r->shelf_attached = true;
+      r->shelf_id = loc_to_shelf_id_.at(r->loc.GetLocation());
 
-      shelf_id_to_loc_[r.shelf_id] = kInvalidLocation;
-      loc_to_shelf_id_.erase(r.loc.GetLocation());
+      shelf_id_to_loc_[r->shelf_id] = kInvalidLocation;
+      loc_to_shelf_id_.erase(r->loc.GetLocation());
       return;
     case Action::DETACH:
-      r.shelf_attached = false;
-      shelf_id_to_loc_[r.shelf_id] = r.loc.GetLocation();
-      loc_to_shelf_id_[r.loc.GetLocation()] = r.shelf_id;
+      r->shelf_attached = false;
+      shelf_id_to_loc_[r->shelf_id] = r->loc.GetLocation();
+      loc_to_shelf_id_[r->loc.GetLocation()] = r->shelf_id;
       return;
     case Action::YIELD:
       return;
     case Action::MOVE:
-      r.loc = r.loc + kDirectionToDelta.at(r.dir);
+      r->loc = r->loc + kDirectionToDelta.at(r->dir);
       return;
     case Action::CTURN:
-      r.dir = ClockwiseTurn(r.dir);
+      r->dir = ClockwiseTurn(r->dir);
       return;
     case Action::CCTURN:
-      r.dir = CounterClockwiseTurn(r.dir);
+      r->dir = CounterClockwiseTurn(r->dir);
       return;
     default:
       LogFatal("Invalid action.");
@@ -165,8 +157,7 @@ void KsSimulator::SanityCheck() {
   for (int i = 0; i < robot_count_; i++) {
     for (int j = i + 1; j < robot_count_; j++) {
       if (GetDist(robot_status_sanity_check_[i].loc, robot_status_sanity_check_[j].loc) < 0.8) {
-//        LogFatal("Collision.");
-        cout << "Collision." << endl;
+        LogFatal("Collision.");
       }
     }
   }

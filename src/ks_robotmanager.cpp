@@ -27,10 +27,10 @@ vector<RobotInfo *> KsRobotManager::GetIdleRobots() {
 }
 
 // Action @a is done for robot @robot_id, update robot status.
-std::optional<MissionReport> KsRobotManager::UpdateRobotStatus(int robot_id, Action a) {
+std::optional<MissionReport> KsRobotManager::UpdateRobotStatus(int robot_id, Action a, ShelfManager *sm) {
   RobotInfo &robot = robot_info_[robot_id];
+  ApplyActionOnRobot(a, &robot, sm);
 
-  ApplyActionOnRobot(a, &robot);
   if (a == Action::ATTACH) {
     return MissionReport(robot.mission.wms_mission, MissionReportType::PICKUP_DONE);
   } else if (a == Action::DETACH) {

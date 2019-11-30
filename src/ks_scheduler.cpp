@@ -54,7 +54,6 @@ void UpdateRemainingPlan(vector<vector<ActionWithTime>> &plan) {
       awt.end_time_ms -= min_start_time;
     }
   }
-//  cout << "min start time: " << min_start_time << endl;
 }
 
 void ValidatePlan(const vector<RobotInfo> init_status,
@@ -80,16 +79,16 @@ void ValidatePlan(const vector<RobotInfo> init_status,
 
 void KsScheduler::AddMission(WmsMission mission) {
   lock_guard<mutex> lock(mutex_io_up_);
-  cout << "received wms mission: " << mission.id
-       << " from: " << mission.pick_from.loc.to_string()
-       << " to: " << mission.drop_to.loc.to_string()
-       << " shelf id: " << mission.shelf_id << endl;
+//  cout << "received wms mission: " << mission.id
+//       << " from: " << mission.pick_from.loc.to_string()
+//       << " to: " << mission.drop_to.loc.to_string()
+//       << " shelf id: " << mission.shelf_id << endl;
   missions_from_wms_.insert(mission);
 }
 
 void KsScheduler::ReportActionDone(CommandReport r) {
   lock_guard<mutex> lock(mutex_io_down_);
-  robot_reports_.push(r);
+  mq_from_simulator_.push(r);
 }
 
 void KsScheduler::Init(KsWmsApi *wms_p, KsSimulatorApi *simulator_p) {
@@ -99,7 +98,7 @@ void KsScheduler::Init(KsWmsApi *wms_p, KsSimulatorApi *simulator_p) {
   robot_manager_.Init();
 
   const std::vector<Location> &shelf_storage_points = ks_map_.GetShelfStoragePoints();
-  // The way shelves are initialized.
+  // The way shelves are initialized should consistent among modules.
   for (int i = 0; i < ks_map_.shelf_count_; i++) {
     shelf_manager_.AddMapping(i, shelf_storage_points[i]);
   }
@@ -108,13 +107,7 @@ void KsScheduler::Init(KsWmsApi *wms_p, KsSimulatorApi *simulator_p) {
 }
 
 void KsScheduler::Run() {
-  // The main event loop for scheduler.
-  // 1. Assign mission to idle robots.
-  // 2. If there are any new assignment, call GetCut(), to get the status of all current robots, and combine all
-  // robots with assignment, for the new round of path planning.
-  // 3. Give the whole new plan to executor.
   while (true) {
-    // TODO: should make this adaptive.
     SleepMS(kScheduleIntervalMs);
 
     mutex_io_up_.lock();
@@ -139,11 +132,17 @@ void KsScheduler::Run() {
 
     // Do not lock during FindPath()(which can be time consuming).
     UpdateRemainingPlan(remaining_plan);
+
+    auto redis_start = std::chrono::system_clock::now();
+
     PfResponse resp = sipp_p_->FindPath({tmp_robot_info, remaining_plan}, &tmp_shelf_manager);
+
+    auto redis_end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = redis_end - redis_start;
+    std::cout << "Planning set elapsed time: " << elapsed_seconds.count() << "s\n";
 
     mutex_.lock();
 
-//    PrintPlanSize(resp.plan);
     ValidatePlan(tmp_robot_info, resp.plan);
     action_graph_.SetPlan(tmp_robot_info, resp.plan);
     mutex_.unlock();
@@ -153,9 +152,9 @@ void KsScheduler::Run() {
 void KsScheduler::AdgRunner() {
   while (true) {
     mutex_io_down_.lock();
-    std::queue<CommandReport> tmp_robot_report = robot_reports_;
-    while (!robot_reports_.empty()) {
-      robot_reports_.pop();
+    std::queue<CommandReport> tmp_robot_report = mq_from_simulator_;
+    while (!mq_from_simulator_.empty()) {
+      mq_from_simulator_.pop();
     }
     mutex_io_down_.unlock();
 
@@ -165,22 +164,20 @@ void KsScheduler::AdgRunner() {
       tmp_robot_report.pop();
       // Robot manager and action graph need to be updated in sync.
       action_graph_.UpdateRobotStatus(report.robot_id, report.action);
-      const auto &rtn = robot_manager_.UpdateRobotStatus(report.robot_id, report.action);
-      if (rtn.has_value()) {
-        // TODO: move the update of shelf manager into robot manager update status.
-        MissionReport r = rtn.value();
+      auto rtn = robot_manager_.UpdateRobotStatus(report.robot_id, report.action, &shelf_manager_);
+      if (rtn) {
+        const MissionReport& r = rtn.value();
         if (r.type == MissionReportType::PICKUP_DONE) {
           cout << "mission: " << r.mission.id << " pickup done. by robot: " << report.robot_id << endl;
-          shelf_manager_.RemoveMapping(r.mission.shelf_id, r.mission.pick_from.loc);
         } else {
           cout << "mission: " << r.mission.id << " drop down done. by robot: " << report.robot_id << endl;
-          shelf_manager_.AddMapping(r.mission.shelf_id, r.mission.drop_to.loc);
         }
         wms_p_->ReportMissionStatus(r);
       }
     }
 
-    std::vector<std::vector<Action>> commands = action_graph_.GetCommands(
+    // TODO: remove the use of robot info once the cut is fully implemented.
+    const vector<vector<Action>>& commands = action_graph_.GetCommands(
         robot_manager_.GetRobotInfo());
     mutex_.unlock();
 

@@ -10,7 +10,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 #set(BUILD_SHARED_LIBS OFF)
 
 # Side note: use "VERBOSE=1 make" to show the actual make command.
-#set(CMAKE_CXX_FLAGS "-O2")
+set(CMAKE_CXX_FLAGS "-O2")
 #set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-static")
 
 set(EXECUTABLE_OUTPUT_PATH

@@ -67,29 +67,18 @@ void GlobalPlan::Cut(vector<RobotInfo> &robot_info,
     cut_ = true;
   }
 
-//  cout << "One call of cut, push count: " << endl;
   for (int i = 0; i < robot_count_; i++) {
     for (int j = to_send_action_index_[i]; j < ((int)plan_[i].size()); j++) {
       remaining_plan[i].push_back(plan_[i][j]);
     }
-//    plan_[i].resize(to_send_action_index_[i]);
-//    cout << (((int)plan_[i].size()) - to_send_action_index_[i]) << " ";
-    plan_[i].erase(plan_[i].begin() + to_send_action_index_[i], plan_[i].end());
+    plan_[i].resize(to_send_action_index_[i]);
   }
-//  cout << endl;
 
   for (int robot_id = 0; robot_id < robot_count_; robot_id++) {
     for (int j = replied_action_index_[robot_id] + 1; j < (int)to_send_action_index_[robot_id]; j++) {
       assert(((int)plan_[robot_id].size()) == ((int)to_send_action_index_[robot_id]));
       Action a = plan_[robot_id][j].action;
-      ApplyActionOnRobot(a, &(robot_info[robot_id]));
-      if (a == Action::ATTACH) {
-        shelf_manager.RemoveMapping(robot_info[robot_id].mission.wms_mission.shelf_id,
-                                    robot_info[robot_id].mission.wms_mission.pick_from.loc);
-      } else if (a == Action::DETACH) {
-        shelf_manager.AddMapping(robot_info[robot_id].mission.wms_mission.shelf_id,
-                                 robot_info[robot_id].mission.wms_mission.drop_to.loc);
-      }
+      ApplyActionOnRobot(a, &(robot_info[robot_id]), &shelf_manager);
     }
   }
 
@@ -126,7 +115,7 @@ void GlobalPlan::SetPlan(vector<RobotInfo> init_robot_info, const vector<ActionW
 
   for (int i = 0; i < robot_count_; i++) {
     for (ActionWithTime awt : plan_[i]) {
-      ApplyActionOnRobot(awt.action, &init_robot_info[i]);
+      ApplyActionOnRobot(awt.action, &init_robot_info[i], nullptr);
     }
   }
   target_robot_info_ = init_robot_info;

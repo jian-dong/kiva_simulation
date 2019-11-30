@@ -68,7 +68,7 @@ class Robot(object):
             self.y = y
             self.theta = theta
         if self.has_shelf != has_shelf:
-            color = "blue" if has_shelf else "cyan"
+            color = "blue" if has_shelf else "purple"
             self.canvas.itemconfigure(self.display_item, fill=color)
             self.has_shelf = has_shelf
 

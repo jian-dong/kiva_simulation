@@ -5,15 +5,13 @@
 #include <string>
 
 namespace ks {
-
-inline void log(const std::string &s) {
+inline void LogNormal(const std::string &s) {
   std::cout << s << std::endl;
 }
 
 inline void LogFatal(const std::string &s) {
-  log(s);
+  LogNormal(s);
   exit(0);
 }
-
 }
 #endif

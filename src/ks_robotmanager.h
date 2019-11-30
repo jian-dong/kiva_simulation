@@ -18,7 +18,7 @@ class KsRobotManager {
   void Init();
 
   void AssignMissions(std::set<WmsMission> &missions, const ActionPlan &cur_plan);
-  std::optional<MissionReport> UpdateRobotStatus(int robot_id, Action a);
+  std::optional<MissionReport> UpdateRobotStatus(int robot_id, Action a, ShelfManager *sm);
   const std::vector<RobotInfo>& GetRobotInfo() const { return robot_info_; };
 
  private:
