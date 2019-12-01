@@ -31,6 +31,8 @@ struct Interval {
     robot_id = -1;
   };
 
+  Interval &operator=(const Interval &o) = default;
+
   bool Includes(int time_ms) const {
     return start_ms <= time_ms
         && time_ms < end_ms;
@@ -151,8 +153,9 @@ class IntervalSeq {
     exit(0);
   }
 
-  void Clear() {
+  void Clear(int robot_id) {
     intervals_.clear();
+    unsafe_intervals_.emplace_back(0, kIntInf, robot_id);
   }
 
   [[nodiscard]] int Size() const {

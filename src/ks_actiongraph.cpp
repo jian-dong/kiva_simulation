@@ -141,17 +141,29 @@ vector<Action> GlobalPlan::GetActionToSend(int robot_id) {
 void GlobalPlan::UpdateRobotStatus(int robot_id, Action a) {
   assert(plan_[robot_id][replied_action_index_[robot_id] + 1].action == a);
   replied_action_index_[robot_id]++;
+  assert(replied_action_index_[robot_id] < to_send_action_index_[robot_id]);
   adj_.RemoveAllEdgesFrom({robot_id, replied_action_index_[robot_id]});
 }
 
 ActionPlan GlobalPlan::GetCurrentPlan() {
   ActionPlan rtn(robot_count_);
+
+  // TODO: consider whether unreplied actions or to send action should be used.
   for (int i = 0; i < robot_count_; i++) {
-    for (int j = replied_action_index_[i] + 1; j < (int)plan_[i].size(); j++) {
+    for (int j = replied_action_index_[i] + 1; j < ((int)plan_[i].size()); j++) {
       rtn[i].push_back(plan_[i][j]);
     }
   }
+
+//  for (int i = 0; i < robot_count_; i++) {
+//    for (int j = to_send_action_index_[i]; j < ((int)plan_[i].size()); j++) {
+//      rtn[i].push_back(plan_[i][j]);
+//    }
+//  }
   return rtn;
+
+
+
 }
 
 }

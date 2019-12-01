@@ -43,7 +43,7 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
       const Mission &m = req.robots[i].mission;
       if (m.is_internal) {
         assert(safe_intervals_[m.internal_mission.to].Unused());
-        safe_intervals_[m.internal_mission.to].Clear();
+        safe_intervals_[m.internal_mission.to].Clear(i);
       } else {
         if (req.robots[i].pos.loc == m.wms_mission.pick_from.loc
             || safe_intervals_[m.wms_mission.pick_from.loc].Unused()) {
@@ -55,9 +55,15 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
 
           assert(false);
         }
-        safe_intervals_[m.wms_mission.pick_from.loc].Clear();
-        assert(safe_intervals_[m.wms_mission.drop_to.loc].Unused());
-        safe_intervals_[m.wms_mission.drop_to.loc].Clear();
+        safe_intervals_[m.wms_mission.pick_from.loc].Clear(i);
+        if (safe_intervals_[m.wms_mission.drop_to.loc].Unused()) {
+
+        } else {
+          cout << "Used interval: ";
+          cout << safe_intervals_[m.wms_mission.drop_to.loc].to_string() << endl;
+          assert(false);
+        }
+        safe_intervals_[m.wms_mission.drop_to.loc].Clear(i);
       }
     }
   }

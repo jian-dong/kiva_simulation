@@ -66,7 +66,7 @@ void KsRobotManager::AssignMissions(std::set<WmsMission> &missions, const Action
       picked_robot->has_mission = true;
       picked_robot->mission.is_internal = false;
       picked_robot->mission.wms_mission = to_assign;
-//      cout << "Assign mission " << to_assign.id << " to robot: " << picked_robot->id << endl;
+      cout << "Assign mission " << to_assign.id << " to robot: " << picked_robot->id << endl;
       mission_it = missions.erase(mission_it);
     } else {
       break;
@@ -120,6 +120,7 @@ RobotInfo *KsRobotManager::GetClosestIdleRobot(Location loc) {
 }
 
 bool KsRobotManager::IsMissionValid(const WmsMission &mission, const set<Location> &used_locations) {
+  // used_locations covers the case of a robot with a mission.
   const Location& pickup_loc = mission.pick_from.loc;
   const Location& dropdown_loc = mission.drop_to.loc;
   if (used_locations.find(pickup_loc) != used_locations.end()) {
@@ -129,34 +130,22 @@ bool KsRobotManager::IsMissionValid(const WmsMission &mission, const set<Locatio
     return false;
   }
 
+  // If there is a robot at its dest.
   for (const RobotInfo& r : robot_info_) {
-    if (!r.has_mission) {
-      continue;
-    }
-    const Mission& assigned = r.mission;
-    if (assigned.is_internal) {
-      if (assigned.internal_mission.to == pickup_loc || assigned.internal_mission.to == dropdown_loc) {
-        return false;
-      }
-    } else {
-      // Does not need to check the wms mission case, since WMS guarantees the pickup and drop down location
-      // won't overlap.
-    }
-  }
-
-  // If there is a free robot at the mission's pickup location, then this mission is valid.
-  for (const RobotInfo& r : robot_info_) {
-    if (r.IsIdle() && (r.pos.loc == pickup_loc)) {
-      return true;
-    }
-  }
-
-  // Except for the previous case, there cannot be robot at pickup/dropdown location of a mission.
-  for (const RobotInfo& r : robot_info_) {
-    if (r.pos.loc == pickup_loc || r.pos.loc == dropdown_loc) {
+    if (r.pos.loc == dropdown_loc) {
       return false;
     }
   }
+
+  // If there is a robot at its dest.
+  for (const RobotInfo& r : robot_info_) {
+    if (r.pos.loc == pickup_loc && r.has_mission) {
+      return false;
+    }
+  }
+
+  // TODO: verify this.
+  // No need to consider internal mission here.
 
   return true;
 }
