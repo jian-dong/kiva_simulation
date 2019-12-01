@@ -59,7 +59,7 @@ class Robot(object):
             self.y = y
             self.theta = theta
             self.has_shelf = has_shelf
-            self.display_item = self.canvas.create_polygon(*(self.get_points()), fill='cyan')
+            self.display_item = self.canvas.create_polygon(*(self.get_points()), fill='blue')
             return
 
         if (not float_equals(self.x, x)) or (not float_equals(self.y, y)) or (not float_equals(self.theta, theta)):
@@ -68,7 +68,7 @@ class Robot(object):
             self.y = y
             self.theta = theta
         if self.has_shelf != has_shelf:
-            color = "blue" if has_shelf else "purple"
+            color = "purple" if has_shelf else "blue"
             self.canvas.itemconfigure(self.display_item, fill=color)
             self.has_shelf = has_shelf
 

@@ -16,8 +16,8 @@
 namespace ks {
 class KsScheduler : public KsSchedulerApi {
  public:
-  KsScheduler(const KsMap& ks_map) : ks_map_(ks_map), robot_manager_(ks_map),
-                                     robot_count_(ks_map.robot_count_),
+  KsScheduler(const KsMap &ks_map) : ks_map_(ks_map), robot_count_(ks_map.robot_count_),
+                                     robot_manager_(ks_map),
                                      action_graph_(ks_map.robot_count_) {};
   void Init(KsWmsApi *wms_p, KsSimulatorApi *simulator_p);
 
@@ -33,10 +33,10 @@ class KsScheduler : public KsSchedulerApi {
   void ReportActionDone(CommandReport r) override;
 
  private:
+  const KsMap &ks_map_;
   const int robot_count_;
-  const KsMap& ks_map_;
-  KsWmsApi* wms_p_;
-  KsSimulatorApi* simulator_p_;
+  KsWmsApi *wms_p_;
+  KsSimulatorApi *simulator_p_;
 
   std::mutex mutex_io_up_;
   std::set<WmsMission> missions_from_wms_;
@@ -50,7 +50,7 @@ class KsScheduler : public KsSchedulerApi {
   KsRobotManager robot_manager_;
   KsActionGraph action_graph_;
   ShelfManager shelf_manager_;
-  SippSolver* sipp_p_;
+  SippSolver *sipp_p_;
 };
 }
 

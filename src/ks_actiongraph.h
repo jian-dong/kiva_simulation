@@ -109,6 +109,7 @@ class GlobalPlan {
         return false;
       }
     }
+    // TODO: remove the assertion here and enable separate planning, once the cut function is feature complete.
     if (target_robot_info_ != robot_info) {
       std::cout << "target robot info: " << std::endl;
       PrintRobotInfo(target_robot_info_);

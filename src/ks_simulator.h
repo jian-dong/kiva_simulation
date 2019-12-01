@@ -28,10 +28,7 @@ struct LocationDouble {
     y = o.y;
   }
 
-  LocationDouble &operator=(const LocationDouble &o) {
-    x = o.x;
-    y = o.y;
-  }
+  LocationDouble &operator=(const LocationDouble &o) = default;
 
   Location GetLocation() {
     return {(int)round(x), (int)round(y)};

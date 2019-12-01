@@ -186,7 +186,7 @@ std::set<Location> KsRobotManager::GetFreeLocations(const std::set<WmsMission> &
     rtn.erase(m.drop_to.loc);
   }
 
-  assert(rtn.size() > 0);
+  assert(!rtn.empty());
   return rtn;
 }
 

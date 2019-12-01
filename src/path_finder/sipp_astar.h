@@ -2,6 +2,7 @@
 #define KIVA_SIMULATION_SRC_PATH_FINDER_SIPP_ASTAR_H_
 
 #include <queue>
+#include <utility>
 
 #include "ks_scheduler_common.h"
 #include "ks_map.h"
@@ -20,7 +21,7 @@ struct SpatioTemporalPoint {
 
   SpatioTemporalPoint() = default;
   SpatioTemporalPoint(Position pos, int time_ms, int safe_interval_index)
-      : pos(pos),
+      : pos(std::move(pos)),
         time_ms(time_ms),
         safe_interval_index(safe_interval_index) {};
 
@@ -37,13 +38,13 @@ struct SpatioTemporalPoint {
   // Because operator< does not consider consider time_ms while
   // here it is considered. TODO: think of if time_ms can be
   // ignored here.
-  bool EqualsTo(const SpatioTemporalPoint &o) const {
+  [[nodiscard]] bool EqualsTo(const SpatioTemporalPoint &o) const {
     return pos == o.pos
         && time_ms == o.time_ms
         && safe_interval_index == o.safe_interval_index;
   }
 
-  bool NotEqualsTo(const SpatioTemporalPoint &o) const {
+  [[nodiscard]] bool NotEqualsTo(const SpatioTemporalPoint &o) const {
     return !EqualsTo(o);
   }
 
@@ -57,7 +58,7 @@ struct PrevState {
   SpatioTemporalPoint stp;
 
   PrevState() = default;
-  PrevState(ActionWithTime awt, SpatioTemporalPoint stp) : action_with_time(awt), stp(stp) {};
+  PrevState(ActionWithTime awt, SpatioTemporalPoint stp) : action_with_time(std::move(awt)), stp(stp) {};
 };
 
 struct State {
@@ -89,7 +90,7 @@ class SippAstar {
   };
 
   // Return a sequence of actions to move the robot from src to dest.
-  ActionWithTimeSeq GetActions(int start_time_ms, const bool has_shelf, const Position pos, const Location dest);
+  ActionWithTimeSeq GetActions(int start_time_ms, bool has_shelf, Position pos, Location dest);
  private:
   // Return the heuristic(in milliseconds) from source to destination.
   int GetHeuristicMs(Location a, Location b);
@@ -99,8 +100,8 @@ class SippAstar {
   Interval GetSafeInterval(SpatioTemporalPoint stp);
 
   const KsMap &map_;
-  const ShelfManager *shelf_manager_p_;
   const std::map<Location, IntervalSeq> &safe_intervals_;
+  const ShelfManager *shelf_manager_p_;
 
   std::set<SpatioTemporalPoint> closed_;
   std::priority_queue<State> open_;

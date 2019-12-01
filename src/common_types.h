@@ -17,10 +17,7 @@ struct Location {
   Location() { x = -1; y = -1; };
   Location(int x, int y) : x(x), y(y) {};
 
-  Location &operator=(const Location &o) {
-    x = o.x;
-    y = o.y;
-  }
+  Location &operator=(const Location &o) = default;
 
   bool operator==(const Location &o) const {
     return x == o.x && y == o.y;

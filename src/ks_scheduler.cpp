@@ -12,30 +12,31 @@ namespace ks {
 using namespace std;
 
 namespace {
-void PrintPlanSize(const std::vector<ActionWithTimeSeq> &plan) {
-  int robot_count = plan.size();
-  cout << "Plan size: ";
-  for (int i = 0; i < robot_count; i++) {
-    cout << plan[i].size() << " ";
-  }
-  cout << endl;
-}
-
-void PrintMissionInfo(const vector<RobotInfo> &robot_info) {
-  for (const auto &r : robot_info) {
-    cout << "robot id: " << r.id << " ";
-    if (r.has_mission) {
-      if (r.mission.is_internal) {
-        cout << "internal mission";
-      } else {
-        cout << r.mission.wms_mission.to_string();
-      }
-    } else {
-      cout << "has no mission.";
-    }
-    cout << endl;
-  }
-}
+// Debug functions.
+//void PrintPlanSize(const std::vector<ActionWithTimeSeq> &plan) {
+//  int robot_count = plan.size();
+//  cout << "Plan size: ";
+//  for (int i = 0; i < robot_count; i++) {
+//    cout << plan[i].size() << " ";
+//  }
+//  cout << endl;
+//}
+//
+//void PrintMissionInfo(const vector<RobotInfo> &robot_info) {
+//  for (const auto &r : robot_info) {
+//    cout << "robot id: " << r.id << " ";
+//    if (r.has_mission) {
+//      if (r.mission.is_internal) {
+//        cout << "internal mission";
+//      } else {
+//        cout << r.mission.wms_mission.to_string();
+//      }
+//    } else {
+//      cout << "has no mission.";
+//    }
+//    cout << endl;
+//  }
+//}
 
 // Reset remaining plan start time, make it 0.
 void UpdateRemainingPlan(vector<vector<ActionWithTime>> &plan) {
@@ -56,7 +57,7 @@ void UpdateRemainingPlan(vector<vector<ActionWithTime>> &plan) {
   }
 }
 
-void ValidatePlan(const vector<RobotInfo> init_status,
+void ValidatePlan(const vector<RobotInfo> &init_status,
                   const vector<vector<ActionWithTime>> &plan) {
   map<Location, IntervalSet> loc_to_intervals;
   int robot_count = init_status.size();

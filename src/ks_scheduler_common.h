@@ -19,8 +19,8 @@ struct Mission {
   InternalMission internal_mission;
 
   Mission() = default;
-  explicit Mission(WmsMission wms_mission) : wms_mission(wms_mission), is_internal(false) {};
-  explicit Mission(InternalMission internal_mission) : internal_mission(internal_mission), is_internal(true) {};
+  explicit Mission(WmsMission wms_mission) : is_internal(false), wms_mission(wms_mission) {};
+  explicit Mission(InternalMission internal_mission) : is_internal(true), internal_mission(internal_mission) {};
   Mission &operator=(const Mission &o) = default;
 
   bool operator==(const Mission &o) const {
@@ -90,16 +90,18 @@ struct RobotInfo {
 
   std::string to_string() const {
     return "id: " + std::to_string(id)
-    + " pos: " + pos.to_string()
-    + " has mission: " + std::to_string(has_mission);
+        + " pos: " + pos.to_string()
+        + " has mission: " + std::to_string(has_mission)
+        + " wms mission id: "
+        + ((has_mission && !mission.is_internal) ? std::to_string(mission.wms_mission.id) : "-1");
   }
 
-  bool operator==(const RobotInfo& o) const {
+  bool operator==(const RobotInfo &o) const {
+    // Should not add the mission status comparison here, because mission assignment for robot manager
+    // is async with action graph.
     return id == o.id
-    && pos == o.pos
-    && shelf_attached == o.shelf_attached
-    && has_mission == o.has_mission
-    && mission == o.mission;
+        && pos == o.pos
+        && shelf_attached == o.shelf_attached;
   }
 };
 
@@ -131,9 +133,8 @@ class ShelfManager {
   ShelfManager(const ShelfManager &o) {
     loc_to_id_ = o.loc_to_id_;
   }
-  ShelfManager &operator=(const ShelfManager &o) {
-    loc_to_id_ = o.loc_to_id_;
-  }
+
+  ShelfManager &operator=(const ShelfManager &o) = default;
 
   void AddMapping(int shelf_id, Location loc) {
     assert(loc_to_id_.find(loc) == loc_to_id_.end());
@@ -154,7 +155,7 @@ class ShelfManager {
 };
 
 // Helper functions.
-inline void ApplyActionOnRobot(Action a, RobotInfo *r, ShelfManager* sm) {
+inline void ApplyActionOnRobot(Action a, RobotInfo *r, ShelfManager *sm) {
   switch (a) {
     case Action::ATTACH:assert(!r->shelf_attached);
       assert(r->has_mission);
@@ -172,7 +173,7 @@ inline void ApplyActionOnRobot(Action a, RobotInfo *r, ShelfManager* sm) {
       r->has_mission = false;
       if (sm != nullptr) {
         sm->AddMapping(r->mission.wms_mission.shelf_id,
-                          r->mission.wms_mission.drop_to.loc);
+                       r->mission.wms_mission.drop_to.loc);
       }
       break;
     case Action::YIELD:
@@ -191,7 +192,7 @@ inline void ApplyActionOnRobot(Action a, RobotInfo *r, ShelfManager* sm) {
   }
 }
 
-inline void ApplyActionOnPosition(Action a, Position* p) {
+inline void ApplyActionOnPosition(Action a, Position *p) {
   switch (a) {
     case Action::ATTACH:break;
     case Action::DETACH:break;

@@ -95,13 +95,13 @@ class KsWms : public KsWmsApi {
   // Helpers.
   const WmsMission& GetPendingMission(int id);
 
-  const KsMap& ks_map_;
-  // Data.
-  KsSchedulerApi* scheduler_p_;
-
   // Constant data structures.
   const std::vector<Location> shelf_operation_points_;
   const std::vector<Location> shelf_storage_points_;
+  const KsMap& ks_map_;
+
+  // Data.
+  KsSchedulerApi* scheduler_p_;
 
   // A counter to generate mission id. This field is used only by the wms
   // thread, so no need to be protected by lock.

@@ -19,6 +19,7 @@ inline int GetActionCostInTime(Action a) {
   if (a == Action::YIELD) {
     LogFatal("Invalid action for SIPP.");
   }
+  exit(0);
 }
 }
 #endif

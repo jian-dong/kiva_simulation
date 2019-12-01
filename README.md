@@ -21,3 +21,5 @@ message over internet may make the program structure cleaner.
 
 1. A large program must be able to be tested separately. To achieve this APIs
 between components needs to be defined. There needs to be an API class and an implementation class.
+
+2. The program shows strange behavior with -O2 turned on, should avoid -O2.

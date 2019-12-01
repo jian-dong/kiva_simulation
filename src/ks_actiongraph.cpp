@@ -11,13 +11,11 @@ using namespace std;
 void KsActionGraph::Cut(vector<RobotInfo> &robot_info,
                         ShelfManager &shelf_manager,
                         vector<ActionWithTimeSeq> &remaining_plan) {
-  assert(robot_info.size() == robot_count_);
   cur_plan_p_->Cut(robot_info, shelf_manager, remaining_plan);
 }
 
 void KsActionGraph::SetPlan(const vector<RobotInfo> &prev_robot_info,
     const vector<ActionWithTimeSeq> &plan) {
-  assert(plan.size() == robot_count_);
   if (!cur_plan_p_->target_robot_info_.empty()) {
     if (cur_plan_p_->target_robot_info_ != prev_robot_info) {
       LogFatal("Invalid plan.");

@@ -11,9 +11,9 @@ namespace sipp_astar {
 using namespace std;
 
 ActionWithTimeSeq SippAstar::GetActions(int start_time_ms,
-                                        const bool has_shelf,
-                                        const Position pos,
-                                        const Location dest) {
+                                        bool has_shelf,
+                                        Position pos,
+                                        Location dest) {
   has_shelf_ = has_shelf;
   dest_ = dest;
   int start_safe_interval_index = safe_intervals_.at(pos.loc).GetIntervalIndex(start_time_ms);
@@ -64,6 +64,7 @@ ActionWithTimeSeq SippAstar::GetActions(int start_time_ms,
 
   LogFatal("Cannof find a path. from: " + pos.to_string() + " to: " + dest.to_string()
                + " with shelf: " + to_string(has_shelf));
+  exit(0);
 }
 
 int SippAstar::GetHeuristicMs(Location a, Location b) {
@@ -100,11 +101,11 @@ std::vector<std::pair<State, ActionWithTime>> SippAstar::GenSuccessors(const Sta
       }
 
       State new_state(new_pos, arrival_time, i, arrival_time, GetHeuristicMs(new_pos.loc, dest_));
-      rtn.push_back(make_pair(new_state,
+      rtn.emplace_back(new_state,
                               ActionWithTime(a,
                                              arrival_time - action_duration, arrival_time,
                                              cur_state.stp.pos,
-                                             new_pos)));
+                                             new_pos));
     }
   }
   return rtn;

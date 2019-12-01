@@ -14,13 +14,13 @@ void AppendToVector(const vector<T> &from, vector<T> *to) {
   to->insert(to->end(), from.begin(), from.end());
 }
 
-void PrintActionSequence(const ActionWithTimeSeq &as) {
-  cout << "Actions: ";
-  for (ActionWithTime a : as) {
-    cout << a.to_string() << " ";
-  }
-  cout << endl;
-}
+//void PrintActionSequence(const ActionWithTimeSeq &as) {
+//  cout << "Actions: ";
+//  for (ActionWithTime a : as) {
+//    cout << a.to_string() << " ";
+//  }
+//  cout << endl;
+//}
 }
 
 PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manager_p) {
@@ -49,6 +49,10 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
             || safe_intervals_[m.wms_mission.pick_from.loc].Unused()) {
           // Do nothing.
         } else {
+          cout << "current robot: " << i << endl;
+          cout << "at location: " << m.wms_mission.pick_from.loc.to_string() << endl;
+          cout << "safe intervals used: " << safe_intervals_[m.wms_mission.pick_from.loc].to_string() << endl;
+
           assert(false);
         }
         safe_intervals_[m.wms_mission.pick_from.loc].Clear();

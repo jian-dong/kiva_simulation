@@ -55,7 +55,9 @@ struct Interval {
   }
 
   std::string to_string() {
-    return std::to_string(start_ms) + "->" + (end_ms >= (kIntInf / 2) ? "INF" : std::to_string(end_ms));
+    return std::to_string(start_ms) + "->"
+        + (end_ms >= (kIntInf / 2) ? "INF" : std::to_string(end_ms))
+        + " by robot " + std::to_string(robot_id);
   }
 };
 
@@ -126,6 +128,7 @@ class IntervalSeq {
 //    std::cout << "removal: start: " << std::to_string(start) << std::endl;
     int index = GetIntervalIndex(start_ms);
     Interval tmp = intervals_[index];
+    assert(tmp.end_ms == kIntInf);
     intervals_.erase(intervals_.begin() + index, intervals_.end());
     if (tmp.start_ms < start_ms) {
       Interval last = Interval(tmp.start_ms, start_ms);
@@ -135,30 +138,38 @@ class IntervalSeq {
     SanityCheck();
   }
 
-  int GetIntervalIndex(int time_ms) const {
-    for (int i = 0; i < intervals_.size(); i++) {
+  [[nodiscard]] int GetIntervalIndex(int time_ms) const {
+    // TODO: an important point may fail o2.
+    for (int i = 0; i < (int) intervals_.size(); i++) {
       if (intervals_[i].Includes(time_ms)) {
         return i;
       }
     }
+
+    std::cout << "Cannot find interval: " << to_string() << " time: " << time_ms << std::endl;
     LogFatal("Cannot find interval.");
+    exit(0);
   }
 
   void Clear() {
     intervals_.clear();
   }
 
-  int Size() const {
+  [[nodiscard]] int Size() const {
     return intervals_.size();
   }
 
-  Interval Get(int i) const {
+  [[nodiscard]] Interval Get(int i) const {
     return intervals_.at(i);
   }
 
-  std::string to_string() const {
+  [[nodiscard]] std::string to_string() const {
     std::string rtn;
     for (Interval interval : intervals_) {
+      rtn += interval.to_string() + ";";
+    }
+    rtn += "unsafe:";
+    for (Interval interval : unsafe_intervals_) {
       rtn += interval.to_string() + ";";
     }
     return rtn;
