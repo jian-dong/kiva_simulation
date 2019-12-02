@@ -8,9 +8,9 @@ namespace ks {
 
 using namespace std;
 
-void KsActionGraph::Cut(vector<RobotInfo> &robot_info,
-                        ShelfManager &shelf_manager,
-                        vector<ActionWithTimeSeq> &remaining_plan) {
+void KsActionGraph::Cut(vector<RobotInfo> *robot_info,
+                        ShelfManager *shelf_manager,
+                        vector<ActionWithTimeSeq> *remaining_plan) {
   cur_plan_p_->Cut(robot_info, shelf_manager, remaining_plan);
 }
 
@@ -53,13 +53,13 @@ ActionPlan KsActionGraph::GetCurrentPlan() {
   return cur_plan_p_->GetCurrentPlan();
 }
 
-void GlobalPlan::Cut(vector<RobotInfo> &robot_info,
-                     ShelfManager &shelf_manager,
-                     vector<ActionWithTimeSeq> &remaining_plan) {
+void GlobalPlan::Cut(vector<RobotInfo> *robot_info,
+                     ShelfManager *shelf_manager,
+                     vector<ActionWithTimeSeq> *remaining_plan) {
   if (cut_) {
-    robot_info = cached_robot_info_;
-    shelf_manager = cached_shelf_manager_;
-    remaining_plan = cached_remaining_plan_;
+    *robot_info = cached_robot_info_;
+    *shelf_manager = cached_shelf_manager_;
+    *remaining_plan = cached_remaining_plan_;
     return;
   } else {
     cut_ = true;
@@ -67,7 +67,7 @@ void GlobalPlan::Cut(vector<RobotInfo> &robot_info,
 
   for (int i = 0; i < robot_count_; i++) {
     for (int j = to_send_action_index_[i]; j < ((int)plan_[i].size()); j++) {
-      remaining_plan[i].push_back(plan_[i][j]);
+      (*remaining_plan)[i].push_back(plan_[i][j]);
     }
     plan_[i].resize(to_send_action_index_[i]);
   }
@@ -76,15 +76,15 @@ void GlobalPlan::Cut(vector<RobotInfo> &robot_info,
     for (int j = replied_action_index_[robot_id] + 1; j < (int)to_send_action_index_[robot_id]; j++) {
       assert(((int)plan_[robot_id].size()) == ((int)to_send_action_index_[robot_id]));
       Action a = plan_[robot_id][j].action;
-      ApplyActionOnRobot(a, &(robot_info[robot_id]), &shelf_manager);
+      ApplyActionOnRobot(a, &((*robot_info)[robot_id]), shelf_manager);
     }
   }
 
-  target_robot_info_ = robot_info;
+  target_robot_info_ = *robot_info;
 
-  cached_robot_info_ = robot_info;
-  cached_shelf_manager_ = shelf_manager;
-  cached_remaining_plan_ = remaining_plan;
+  cached_robot_info_ = *robot_info;
+  cached_shelf_manager_ = *shelf_manager;
+  cached_remaining_plan_ = *remaining_plan;
 }
 
 void GlobalPlan::SetPlan(vector<RobotInfo> init_robot_info, const vector<ActionWithTimeSeq> &plan) {

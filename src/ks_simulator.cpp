@@ -65,6 +65,7 @@ void KsSimulator::AddActions(Command command) {
 
 void KsSimulator::Run() {
   while (true) {
+//    auto cycle_start = std::chrono::system_clock::now();
     mutex_io_.lock();
 
     while (!mq_from_scheduler_.empty()) {
@@ -109,14 +110,14 @@ void KsSimulator::Run() {
       sstream << loc.x << " " << loc.y << " ";
     }
 
-    auto redis_start = std::chrono::system_clock::now();
-    RedisSet(kRedisKey, sstream.str());
-    auto redis_end = std::chrono::system_clock::now();
 
-    std::chrono::duration<double> elapsed_seconds = redis_end - redis_start;
-//    std::cout << "Redis set elapsed time: " << elapsed_seconds.count() << "s\n";
+    RedisSet(kRedisKey, sstream.str());
 
     SanityCheck();
+//    auto cycle_end = std::chrono::system_clock::now();
+//    std::chrono::duration<double> elapsed_seconds = cycle_end - cycle_start;
+//    std::cout << "Redis set elapsed time: " << elapsed_seconds.count() << "s\n";
+
     SleepMS(kSimulatorSleepDurationMs);
   }
 }

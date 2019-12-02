@@ -125,9 +125,9 @@ class GlobalPlan {
   std::vector<Action> GetActionToSend(int robot_id);
   // This function is idempotent, the current behavior is stop sending new commands, just wait
   // for all the already sent command to finish.
-  void Cut(std::vector<RobotInfo> &robot_info,
-           ShelfManager &shelf_manager,
-           std::vector<ActionWithTimeSeq> &remaining_plan);
+  void Cut(std::vector<RobotInfo> *robot_info,
+           ShelfManager *shelf_manager,
+           std::vector<ActionWithTimeSeq> *remaining_plan);
   // This function may be called on the next plan multiple times.
   void SetPlan(std::vector<RobotInfo> init_robot_info, const std::vector<ActionWithTimeSeq> &plan);
   ActionPlan GetCurrentPlan();
@@ -160,9 +160,9 @@ class KsActionGraph {
     next_plan_p_->Clear();
   };
 
-  void Cut(std::vector<RobotInfo> &robot_info,
-           ShelfManager &shelf_manager,
-           std::vector<ActionWithTimeSeq> &remaining_plan);
+  void Cut(std::vector<RobotInfo> *robot_info,
+           ShelfManager *shelf_manager,
+           std::vector<ActionWithTimeSeq> *remaining_plan);
   void SetPlan(const std::vector<RobotInfo> &prev_robot_info, const std::vector<ActionWithTimeSeq> &plan);
   // Returns the to acknowledge and to send part of the current plan.
   // The initial status of all robots corresponds to this plan is available in robot manager.

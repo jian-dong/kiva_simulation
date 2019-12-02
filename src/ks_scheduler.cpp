@@ -111,6 +111,8 @@ void KsScheduler::Run() {
   while (true) {
     SleepMS(kScheduleIntervalMs);
 
+    auto cycle_start = std::chrono::system_clock::now();
+
     mutex_io_up_.lock();
     if (missions_from_wms_.empty()) {
       mutex_io_up_.unlock();
@@ -120,32 +122,35 @@ void KsScheduler::Run() {
     mutex_.lock();
 
     // Assign missions.
-    robot_manager_.AssignMissions(missions_from_wms_, action_graph_.GetCurrentPlan());
+    robot_manager_.AssignMissions(&missions_from_wms_, action_graph_.GetCurrentPlan());
     mutex_io_up_.unlock();
 
     // Make a copy of current state.
     vector<RobotInfo> tmp_robot_info = robot_manager_.GetRobotInfo();
     ShelfManager tmp_shelf_manager(shelf_manager_);
-    vector<vector<ActionWithTime>> remaining_plan(robot_count_);
-    action_graph_.Cut(tmp_robot_info, tmp_shelf_manager, remaining_plan);
+    vector<vector<ActionWithTime>> remaining_plan;
+    remaining_plan.resize(robot_count_);
+    action_graph_.Cut(&tmp_robot_info, &tmp_shelf_manager, &remaining_plan);
 
     mutex_.unlock();
 
     // Do not lock during FindPath()(which can be time consuming).
     UpdateRemainingPlan(remaining_plan);
 
-    auto redis_start = std::chrono::system_clock::now();
+
 
     PfResponse resp = sipp_p_->FindPath({tmp_robot_info, remaining_plan}, &tmp_shelf_manager);
 
-    auto redis_end = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed_seconds = redis_end - redis_start;
-    std::cout << "Planning set elapsed time: " << elapsed_seconds.count() << "s\n";
 
     mutex_.lock();
 
     ValidatePlan(tmp_robot_info, resp.plan);
     action_graph_.SetPlan(tmp_robot_info, resp.plan);
+
+    auto cycle_end = std::chrono::system_clock::now();
+    std::chrono::duration<double> elapsed_seconds = cycle_end - cycle_start;
+    std::cout << "Planning set elapsed time: " << elapsed_seconds.count() << "s\n";
+
     mutex_.unlock();
   }
 }
