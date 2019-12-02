@@ -19,7 +19,7 @@ const int kMinOperationTimeS = 20;
 const int kMoveOutProb = 20;
 
 // Scheduler related.
-const int kScheduleIntervalMs = 8000;
+const int kScheduleIntervalMs = 6000;
 const int kUpdateIntervalMs = 300;
 
 // Map related.

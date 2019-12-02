@@ -28,6 +28,7 @@ struct WmsMission {
 
   WmsMission() = default;
   WmsMission(int id) : id(id) {};
+  WmsMission(const WmsMission &o) = default;
 
   WmsMission &operator=(const WmsMission &o) = default;
 

@@ -84,7 +84,7 @@ void KsScheduler::AddMission(WmsMission mission) {
 //       << " from: " << mission.pick_from.loc.to_string()
 //       << " to: " << mission.drop_to.loc.to_string()
 //       << " shelf id: " << mission.shelf_id << endl;
-  missions_from_wms_.insert(mission);
+  mq_from_wms_.push(mission);
 }
 
 void KsScheduler::ReportActionDone(CommandReport r) {
@@ -109,21 +109,18 @@ void KsScheduler::Init(KsWmsApi *wms_p, KsSimulatorApi *simulator_p) {
 
 void KsScheduler::Run() {
   while (true) {
-    SleepMS(kScheduleIntervalMs);
-
-    auto cycle_start = std::chrono::system_clock::now();
-
     mutex_io_up_.lock();
-    if (missions_from_wms_.empty()) {
-      mutex_io_up_.unlock();
-      continue;
+    while (!mq_from_wms_.empty()) {
+      assert(missions_from_wms_.insert(mq_from_wms_.front()).second);
+      mq_from_wms_.pop();
     }
+
+    mutex_io_up_.unlock();
 
     mutex_.lock();
 
     // Assign missions.
     robot_manager_.AssignMissions(&missions_from_wms_, action_graph_.GetCurrentPlan());
-    mutex_io_up_.unlock();
 
     // Make a copy of current state.
     vector<RobotInfo> tmp_robot_info = robot_manager_.GetRobotInfo();
@@ -136,22 +133,16 @@ void KsScheduler::Run() {
 
     // Do not lock during FindPath()(which can be time consuming).
     UpdateRemainingPlan(remaining_plan);
-
-
-
     PfResponse resp = sipp_p_->FindPath({tmp_robot_info, remaining_plan}, &tmp_shelf_manager);
 
+    ValidatePlan(tmp_robot_info, resp.plan);
+    TwoWayAdjList adj = KsActionGraph::BuildTwoWayAdjList(resp.plan);
 
     mutex_.lock();
-
-    ValidatePlan(tmp_robot_info, resp.plan);
-    action_graph_.SetPlan(tmp_robot_info, resp.plan);
-
-    auto cycle_end = std::chrono::system_clock::now();
-    std::chrono::duration<double> elapsed_seconds = cycle_end - cycle_start;
-    std::cout << "Planning set elapsed time: " << elapsed_seconds.count() << "s\n";
-
+    action_graph_.SetPlan(tmp_robot_info, resp.plan, &adj);
     mutex_.unlock();
+
+    SleepMS(kScheduleIntervalMs);
   }
 }
 
@@ -192,6 +183,7 @@ void KsScheduler::AdgRunner() {
         simulator_p_->AddActions({i, commands[i]});
       }
     }
+
     SleepMS(kUpdateIntervalMs);
   }
 }

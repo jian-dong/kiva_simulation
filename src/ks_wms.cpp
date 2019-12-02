@@ -145,7 +145,6 @@ const WmsMission &KsWms::GetPendingMission(int id) {
 
 void KsWms::ReportMissionStatus(MissionReport r) {
   lock_guard<mutex> lock(mutex_io_);
-//  cout << "Mission :" << r.mission.id << " done." << endl;
   message_queue_.push(r);
 }
 
