@@ -21,9 +21,13 @@ message over internet may make the program structure cleaner.
 5. Computing the action dependency graph is time consuming(for 300 robots, it takes around 10s). Move it out of
 the critical path makes the program more responsive.
 
+6. Version 93b7c4278a745797b702530cb598e2c73950b442 is tested to 2000 tasks in debug mode.
+
 ## Lessons Learned
 
 1. A large program must be able to be tested separately. To achieve this APIs
 between components needs to be defined. There needs to be an API class and an implementation class.
 
 2. The program shows strange behavior with -O2 turned on, should avoid -O2.
+
+3. Should finish all behavior before turn on -O2, since with optimization turned on, it is much harder to debug.
