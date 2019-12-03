@@ -4,6 +4,7 @@
 #include <vector>
 #include <set>
 #include <optional>
+#include <list>
 
 #include "common_types.h"
 #include "ks_map.h"
@@ -17,7 +18,7 @@ class KsRobotManager {
   KsRobotManager(const KsMap &ks_map) : ks_map_(ks_map), robot_count_(ks_map.robot_count_) {};
   void Init();
 
-  void AssignMissions(std::set<WmsMission> *missions, const ActionPlan &cur_plan);
+  bool AssignMissions(std::list<WmsMission> *missions, const ActionPlan &cur_plan);
   std::optional<MissionReport> UpdateRobotStatus(int robot_id, Action a, ShelfManager *sm);
   [[nodiscard]] const std::vector<RobotInfo>& GetRobotInfo() const { return robot_info_; };
 

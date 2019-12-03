@@ -40,8 +40,10 @@ std::optional<MissionReport> KsRobotManager::UpdateRobotStatus(int robot_id, Act
   }
 }
 
-void KsRobotManager::AssignMissions(set<WmsMission> *missions, const ActionPlan &cur_plan) {
+bool KsRobotManager::AssignMissions(std::list<WmsMission> *missions, const ActionPlan &cur_plan) {
+  bool rtn = false;
   set<Location> used_locations;
+  cout << "Assign mission current plan size: " << Get2DMatrixSize(cur_plan) << endl;
   for (int i = 0; i < robot_count_; i++) {
     for (ActionWithTime a : cur_plan[i]) {
       assert(robot_info_[i].has_mission);
@@ -50,14 +52,14 @@ void KsRobotManager::AssignMissions(set<WmsMission> *missions, const ActionPlan 
     }
   }
 
-  auto mission_it = missions->begin();
-  while (mission_it != missions->end()) {
+  for (auto mission_it = missions->begin(); mission_it != missions->end(); ) {
     WmsMission to_assign = *mission_it;
     if (!IsMissionValid(to_assign, used_locations)) {
       mission_it++;
       continue;
     }
     if (HasIdleRobot()) {
+      rtn = true;
       RobotInfo* picked_robot = GetIdleRobotAtLocation(to_assign.pick_from.loc);
       if (picked_robot == nullptr) {
         picked_robot = GetClosestIdleRobot(to_assign.pick_from.loc);
@@ -66,29 +68,34 @@ void KsRobotManager::AssignMissions(set<WmsMission> *missions, const ActionPlan 
       picked_robot->has_mission = true;
       picked_robot->mission.is_internal = false;
       picked_robot->mission.wms_mission = to_assign;
-//      cout << "Assign mission " << to_assign.id << " to robot: " << picked_robot->id << endl;
+      cout << "Assign mission " << to_assign.id
+           << " from: " << to_assign.pick_from.loc.to_string()
+           << " to " << to_assign.drop_to.loc.to_string()
+           << " to robot: " << picked_robot->id << endl;
       mission_it = missions->erase(mission_it);
     } else {
       break;
     }
   }
 
-  vector<RobotInfo *> idle_robots = GetIdleRobots();
-  set<Location> free_locations = GetFreeLocations(*missions);
-  for (RobotInfo* r : idle_robots) {
-    // If r is at the destination of any unassigned mission m, then move r to a random storage location
-    // that is not 1. occupied, 2. is the source or dest of any mission.
-    for (const WmsMission& mission : *missions) {
-      if (r->pos.loc == mission.drop_to.loc) {
-        r->has_mission = true;
-        r->mission.is_internal = true;
-        r->mission.internal_mission.to = *free_locations.begin();
-        free_locations.erase(free_locations.begin());
-        cout << "Assigned internal mission to robot: " << r->id
-            << " move to: " << r->mission.internal_mission.to.to_string() << endl;
-      }
-    }
-  }
+//  vector<RobotInfo *> idle_robots = GetIdleRobots();
+//  set<Location> free_locations = GetFreeLocations(*missions);
+//  for (RobotInfo* r : idle_robots) {
+//    // If r is at the destination of any unassigned mission m, then move r to a random storage location
+//    // that is not 1. occupied, 2. is the source or dest of any mission.
+//    for (const WmsMission& mission : *missions) {
+//      if (r->pos.loc == mission.drop_to.loc) {
+//        rtn = true;
+//        r->has_mission = true;
+//        r->mission.is_internal = true;
+//        r->mission.internal_mission.to = *free_locations.begin();
+//        free_locations.erase(free_locations.begin());
+//        cout << "Assigned internal mission to robot: " << r->id
+//            << " move to: " << r->mission.internal_mission.to.to_string() << endl;
+//      }
+//    }
+//  }
+  return rtn;
 }
 
 RobotInfo *KsRobotManager::GetIdleRobotAtLocation(Location loc) {

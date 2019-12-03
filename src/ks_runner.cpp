@@ -11,7 +11,9 @@
 namespace ks {
 
 void KsRunner::Start() {
-  srand(time(nullptr));
+//  srand(time(nullptr));
+  // TODO: this may be useful for debug.
+  srand(0);
 
   // Create stubs.
   map_p_ = new KsMap(kMapFilePath);

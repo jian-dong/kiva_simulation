@@ -33,6 +33,8 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
     safe_intervals_[l] = IntervalSeq();
   }
 
+  cout << "sipp solver current plan size: " << Get2DMatrixSize(req.prev_plan) << endl;
+
   for (int i = 0; i < robot_count_; i++) {
     // If prev_plan is empty, then the whole interval will be removed.
     // If prev_plan is not empty, remove intervals according to the plan.
@@ -70,6 +72,7 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
 
   // 2. For each robot, plan a route.
   PfResponse rtn;
+  rtn.plan.clear();
   rtn.plan = req.prev_plan;
   for (int robot_id = 0; robot_id < robot_count_; robot_id++) {
     const RobotInfo &robot = req.robots[robot_id];
@@ -99,6 +102,9 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
     } else {
       PlanWmsMission(robot, &rtn.plan[robot_id]);
     }
+
+    cout << "Planning for robot which has a mission but not a plan: " << robot_id
+        << " plan size: " << (int)rtn.plan[robot_id].size() << endl;
   }
 
   return rtn;

@@ -11,16 +11,16 @@ using namespace std;
 void KsActionGraph::Cut(vector<RobotInfo> *robot_info,
                         ShelfManager *shelf_manager,
                         vector<ActionWithTimeSeq> *remaining_plan) {
-  assert(!going_to_set_);
+  assert(!in_transition_);
+  in_transition_ = true;
+  cout << "cut happened" << endl;
   cur_plan_p_->Cut(robot_info, shelf_manager, remaining_plan);
-  going_to_set_ = true;
 }
 
 void KsActionGraph::SetPlan(const std::vector<RobotInfo> &prev_robot_info,
                             const std::vector<ActionWithTimeSeq> &plan,
                             TwoWayAdjList *adj_p) {
   if (cur_plan_p_->plan_set_) {
-    assert(cur_plan_p_->cut_);
     if (cur_plan_p_->target_robot_info_ != prev_robot_info) {
       std::cout << "target robot info: " << std::endl;
       PrintRobotInfo(cur_plan_p_->target_robot_info_);
@@ -32,26 +32,40 @@ void KsActionGraph::SetPlan(const std::vector<RobotInfo> &prev_robot_info,
       return;
     }
   }
+  cout << "set plan happened" << endl;
   next_plan_p_->SetPlan(prev_robot_info, plan, adj_p);
-  going_to_set_ = false;
+  assert(in_transition_);
+  in_transition_ = false;
 }
 
 void KsActionGraph::UpdateRobotStatus(int robot_id, Action a) {
   cur_plan_p_->UpdateRobotStatus(robot_id, a);
 }
 
-vector<vector<Action>> KsActionGraph::GetCommands(const std::vector<RobotInfo> &robot_info) {
+vector<vector<Action>> KsActionGraph::GetCommands(const std::vector<RobotInfo> &robot_info, int &acked) {
   vector<vector<Action>> rtn(robot_count_);
   if (!cur_plan_p_->plan_set_) {
     if (next_plan_p_->plan_set_) {
-      swap(cur_plan_p_, next_plan_p_);
+      cout << "swap plan happened - should not happen often" << endl;
+//      swap(cur_plan_p_, next_plan_p_);
+      GlobalPlan *tmp_p = cur_plan_p_;
+      cur_plan_p_ = next_plan_p_;
+      next_plan_p_ = tmp_p;
+      acked = 0;
     } else {
       return rtn;
     }
   } else {
-    if (cur_plan_p_->Finished(robot_info) && !going_to_set_) {
+    if (cur_plan_p_->Finished(robot_info) && (!in_transition_)) {
       if (next_plan_p_->plan_set_) {
-        swap(cur_plan_p_, next_plan_p_);
+        cur_plan_p_->plan_set_ = false;
+        cout << "swap plan happened" << endl;
+//        swap(cur_plan_p_, next_plan_p_);
+        GlobalPlan *tmp_p = cur_plan_p_;
+        cur_plan_p_ = next_plan_p_;
+        next_plan_p_ = tmp_p;
+        cout << "total acked in current plan: " << acked << endl;
+        acked = 0;
       } else {
         return rtn;
       }
@@ -97,15 +111,6 @@ TwoWayAdjList KsActionGraph::BuildTwoWayAdjList(const std::vector<ActionWithTime
 void GlobalPlan::Cut(vector<RobotInfo> *robot_info,
                      ShelfManager *shelf_manager,
                      vector<ActionWithTimeSeq> *remaining_plan) {
-  if (cut_) {
-    *robot_info = cached_robot_info_;
-    *shelf_manager = cached_shelf_manager_;
-    *remaining_plan = cached_remaining_plan_;
-    return;
-  } else {
-    cut_ = true;
-  }
-
   for (int i = 0; i < robot_count_; i++) {
     for (int j = to_send_action_index_[i]; j < ((int)plan_[i].size()); j++) {
       (*remaining_plan)[i].push_back(plan_[i][j]);
@@ -122,16 +127,15 @@ void GlobalPlan::Cut(vector<RobotInfo> *robot_info,
   }
 
   target_robot_info_ = *robot_info;
-  cached_robot_info_ = *robot_info;
-  cached_shelf_manager_ = *shelf_manager;
-  cached_remaining_plan_ = *remaining_plan;
 }
 
 void GlobalPlan::SetPlan(vector<RobotInfo> init_robot_info,
                          const vector<ActionWithTimeSeq> &plan,
                          TwoWayAdjList *adj_p) {
+  assert(!plan_set_);
   Clear();
   plan_ = plan;
+  cout << "newly set plan size: " << Get2DMatrixSize(plan_) << endl;
   adj_ = std::move(*adj_p);
 
   for (int i = 0; i < robot_count_; i++) {
@@ -141,14 +145,13 @@ void GlobalPlan::SetPlan(vector<RobotInfo> init_robot_info,
   }
   target_robot_info_ = init_robot_info;
   plan_set_ = true;
-  cut_ = false;
 }
 
 vector<Action> GlobalPlan::GetActionToSend(int robot_id) {
   vector<Action> rtn;
   int action_index;
   for (action_index = to_send_action_index_[robot_id]; action_index < (int) plan_[robot_id].size(); action_index++) {
-    if (action_index - replied_action_index_[robot_id] > 5) {
+    if (action_index - replied_action_index_[robot_id] > kCommandsToSent) {
       break;
     }
     Node to_send(robot_id, action_index);

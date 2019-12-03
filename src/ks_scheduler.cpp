@@ -105,14 +105,19 @@ void KsScheduler::Init(KsWmsApi *wms_p, KsSimulatorApi *simulator_p) {
   }
 
   sipp_p_ = new SippSolver(ks_map_);
+
+  acked_action_count_ = 0;
 }
 
 void KsScheduler::Run() {
   while (true) {
+    SleepMS(kScheduleIntervalMs);
+
     mutex_io_up_.lock();
     while (!mq_from_wms_.empty()) {
-      assert(missions_from_wms_.insert(mq_from_wms_.front()).second);
+      WmsMission m = mq_from_wms_.front();
       mq_from_wms_.pop();
+      missions_from_wms_.push_back(m);
     }
 
     mutex_io_up_.unlock();
@@ -120,14 +125,27 @@ void KsScheduler::Run() {
     mutex_.lock();
 
     // Assign missions.
+//    bool has_new_assignment = robot_manager_.AssignMissions(
+//        &missions_from_wms_,
+//        action_graph_.GetCurrentPlan());
+//    if (!has_new_assignment) {
+//      mutex_.unlock();
+//      continue;
+//    }
+    if (!action_graph_.ShouldPlan()) {
+      mutex_.unlock();
+      continue;
+    }
     robot_manager_.AssignMissions(&missions_from_wms_, action_graph_.GetCurrentPlan());
-
     // Make a copy of current state.
     vector<RobotInfo> tmp_robot_info = robot_manager_.GetRobotInfo();
     ShelfManager tmp_shelf_manager(shelf_manager_);
     vector<vector<ActionWithTime>> remaining_plan;
     remaining_plan.resize(robot_count_);
     action_graph_.Cut(&tmp_robot_info, &tmp_shelf_manager, &remaining_plan);
+
+//    robot_manager_.AssignMissions(&missions_from_wms_, remaining_plan);
+//    cout << "remaining plan size: " << Get2DMatrixSize(remaining_plan) << endl;
 
     mutex_.unlock();
 
@@ -141,8 +159,6 @@ void KsScheduler::Run() {
     mutex_.lock();
     action_graph_.SetPlan(tmp_robot_info, resp.plan, &adj);
     mutex_.unlock();
-
-    SleepMS(kScheduleIntervalMs);
   }
 }
 
@@ -157,6 +173,7 @@ void KsScheduler::AdgRunner() {
 
     mutex_.lock();
     while (!tmp_robot_report.empty()) {
+      acked_action_count_++;
       CommandReport report = tmp_robot_report.front();
       tmp_robot_report.pop();
       // Robot manager and action graph need to be updated in sync.
@@ -175,7 +192,7 @@ void KsScheduler::AdgRunner() {
 
     // TODO: remove the use of robot info once the cut is fully implemented.
     const vector<vector<Action>>& commands = action_graph_.GetCommands(
-        robot_manager_.GetRobotInfo());
+        robot_manager_.GetRobotInfo(), acked_action_count_);
     mutex_.unlock();
 
     for (int i = 0; i < robot_count_; i++) {

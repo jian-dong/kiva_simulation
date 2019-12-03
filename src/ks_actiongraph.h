@@ -73,34 +73,23 @@ class TwoWayAdjList {
 class GlobalPlan {
  public:
   GlobalPlan(int robot_count) : robot_count_(robot_count) {
-    plan_set_ = false;
     plan_.resize(robot_count);
     to_send_action_index_.resize(robot_count);
     replied_action_index_.resize(robot_count);
-    for (int i = 0; i < robot_count_; i++) {
-      to_send_action_index_[i] = 0;
-      replied_action_index_[i] = -1;
-    }
-    adj_.Clear();
-    target_robot_info_.clear();
-
-    cut_ = false;
+    Clear();
   }
 
   GlobalPlan(const GlobalPlan &o) = default;
 
   void Clear() {
     plan_set_ = false;
-    for (int i = 0; i < robot_count_; i++) {
-      plan_[i].clear();
-    }
+    plan_.clear();
     for (int i = 0; i < robot_count_; i++) {
       to_send_action_index_[i] = 0;
       replied_action_index_[i] = -1;
     }
     adj_.Clear();
     target_robot_info_.clear();
-    cut_ = false;
   }
 
   [[nodiscard]] bool Finished(const std::vector<RobotInfo> &robot_info) const {
@@ -119,6 +108,11 @@ class GlobalPlan {
       std::cout << std::endl;
       std::cout << "Failed the finished robot info check" << std::endl;
     }
+
+    for (int i = 0; i < robot_count_; i++) {
+      assert(to_send_action_index_[i] == ((int) plan_[i].size()));
+    }
+
     assert(target_robot_info_ == robot_info);
     return true;
   }
@@ -147,12 +141,6 @@ class GlobalPlan {
 
   std::vector<std::vector<ActionWithTime>> plan_;
   TwoWayAdjList adj_;
-
-  // Cached data for cut.
-  bool cut_;
-  std::vector<RobotInfo> cached_robot_info_;
-  ShelfManager cached_shelf_manager_;
-  std::vector<ActionWithTimeSeq> cached_remaining_plan_;
 };
 
 class KsActionGraph {
@@ -162,7 +150,7 @@ class KsActionGraph {
     next_plan_p_ = new GlobalPlan(robot_count);
     cur_plan_p_->Clear();
     next_plan_p_->Clear();
-    going_to_set_ = false;
+    in_transition_ = false;
   };
 
   void Cut(std::vector<RobotInfo> *robot_info,
@@ -175,15 +163,18 @@ class KsActionGraph {
   // The initial status of all robots corresponds to this plan is available in robot manager.
   ActionPlan GetCurrentPlan() const;
   void UpdateRobotStatus(int robot_id, Action a);
-  std::vector<std::vector<Action>> GetCommands(const std::vector<RobotInfo> &robot_info);
+  std::vector<std::vector<Action>> GetCommands(const std::vector<RobotInfo> &robot_info, int &acked);
+  bool ShouldPlan() { return !next_plan_p_->plan_set_;};
 
   static TwoWayAdjList BuildTwoWayAdjList(const std::vector<ActionWithTimeSeq> &plan);
+
 
  private:
   const int robot_count_;
   GlobalPlan *cur_plan_p_;
   GlobalPlan *next_plan_p_;
-  bool going_to_set_;
+  // Cut started, set not yet finished.
+  bool in_transition_;
 };
 }
 

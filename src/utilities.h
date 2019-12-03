@@ -71,5 +71,13 @@ inline std::string DoubleToString(double a) {
   return buffer;
 }
 
+template<class T>
+int Get2DMatrixSize(const std::vector<std::vector<T>> &matrix) {
+  int rtn = 0;
+  for (const auto r : matrix) {
+    rtn += r.size();
+  }
+  return rtn;
+}
 }
 #endif

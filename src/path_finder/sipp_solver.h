@@ -141,7 +141,6 @@ class IntervalSeq {
   }
 
   [[nodiscard]] int GetIntervalIndex(int time_ms) const {
-    // TODO: an important point may fail o2.
     for (int i = 0; i < (int) intervals_.size(); i++) {
       if (intervals_[i].Includes(time_ms)) {
         return i;

@@ -45,13 +45,15 @@ class KsScheduler : public KsSchedulerApi {
   std::queue<CommandReport> mq_from_simulator_;
 
   std::mutex mutex_;
-  std::set<WmsMission> missions_from_wms_;
+  std::list<WmsMission> missions_from_wms_;
   // Maintain robot status and the action dependency graph, the two data structures below should
   // be protected by mutex_ and kept in sync.
   KsRobotManager robot_manager_;
   KsActionGraph action_graph_;
   ShelfManager shelf_manager_;
   SippSolver *sipp_p_;
+
+  int acked_action_count_;
 };
 }
 
