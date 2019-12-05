@@ -140,8 +140,9 @@ void KsScheduler::Run() {
     mutex_io_up_.unlock();
 
     mutex_.lock();
-
+    // TODO: develop a mode that can do/use global replanning.
     robot_manager_.AssignMissions(&missions_from_wms_, action_graph_.GetCurrentPlan());
+    // TODO: rewrite this section, since robot_info is not really used.
     // Make a copy of current state.
     vector<RobotInfo> tmp_robot_info = robot_manager_.GetRobotInfo();
     ShelfManager tmp_shelf_manager(shelf_manager_);
@@ -160,6 +161,7 @@ void KsScheduler::Run() {
 
     set<Edge> new_edges = GetNewDependency(resp.plan, remaining_plan);
 
+    // TODO: validate the dependency graph in a separate thread.
     // For validation only.
 //    for (int i = 0; i < robot_count_; i++) {
 //      if (!resp.plan[i].empty()) {

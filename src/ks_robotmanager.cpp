@@ -77,6 +77,7 @@ bool KsRobotManager::AssignMissions(std::list<WmsMission> *missions, const Actio
     }
   }
 
+  // TODO: test internal tasks in a smaller map, then enable this.
 //  vector<RobotInfo *> idle_robots = GetIdleRobots();
 //  set<Location> free_locations = GetFreeLocations(*missions);
 //  for (RobotInfo* r : idle_robots) {

@@ -50,6 +50,8 @@ void KsActionGraph::SetPlan(const std::vector<ActionWithTimeSeq> &new_plan, cons
     }
   }
 
+  // TODO: between cut and set, a task may be finished, need to handle this, the current handling
+  // may have bugs.
   for (const auto& e : edges) {
 //    assert(e.from.action_index < (int) plan_[e.from.robot_id].size());
     assert(e.to.action_index < (int)plan_[e.to.robot_id].size());
@@ -60,6 +62,7 @@ void KsActionGraph::SetPlan(const std::vector<ActionWithTimeSeq> &new_plan, cons
       continue;
     }
 //    cout << "newly added edges: " << e.to_string() << endl;
+    // TODO: also check e.to, the robot/task associated with e.to may be finished.
     adj_.AddEdge(e.from, e.to);
   }
   cut_started_ = false;
