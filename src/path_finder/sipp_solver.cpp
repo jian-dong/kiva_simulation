@@ -24,8 +24,6 @@ void PrintActionSequence(const ActionWithTimeSeq &as) {
 }
 
 PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manager_p) {
-  cout << "Finding path with start time: " << req.start_time_ms << endl;
-
   // 1. Initialize all safe intervals, for robots with no mission, the location they stay is always non-safe.
   shelf_manager_p_ = shelf_manager_p;
   robot_count_ = req.robots.size();
@@ -39,7 +37,6 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
     // If prev_plan is empty, then the whole interval will be removed.
     // If prev_plan is not empty, remove intervals according to the plan.
     Position init_pos = req.prev_plan[i].empty() ? req.robots[i].pos : req.prev_plan[i][0].start_pos;
-//    UpdateSafeIntervalsWithActions(0, req.robots[i].pos, req.prev_plan[i], i);
     UpdateSafeIntervalsWithActions(0, req.start_time_ms, init_pos, req.prev_plan[i], i);
 
     // For robots with a mission but without a plan.
@@ -51,7 +48,7 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
       } else {
         if (req.robots[i].pos.loc == m.wms_mission.pick_from.loc
             || safe_intervals_[m.wms_mission.pick_from.loc].Unused()) {
-          // Do nothing.
+          // Expected, do nothing.
         } else {
           cout << "current robot: " << i << endl;
           cout << "at location: " << m.wms_mission.pick_from.loc.to_string() << endl;
@@ -60,7 +57,7 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
         }
         safe_intervals_[m.wms_mission.pick_from.loc].Clear(i);
         if (safe_intervals_[m.wms_mission.drop_to.loc].Unused()) {
-
+          // Expected, do nothing.
         } else {
           cout << "Used interval: ";
           cout << safe_intervals_[m.wms_mission.drop_to.loc].to_string() << endl;
@@ -102,8 +99,8 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
     } else {
       PlanWmsMission(req.start_time_ms, robot, &rtn.plan[robot_id]);
     }
-    cout << "Planning for robot which has a mission but not a plan: " << robot_id
-        << " plan size: " << (int)rtn.plan[robot_id].size() << " action seq: " << endl;
+//    cout << "Planning for robot which has a mission but not a plan: " << robot_id
+//        << " plan size: " << (int)rtn.plan[robot_id].size() << " action seq: " << endl;
 //    PrintActionSequence(rtn.plan[robot_id]);
   }
 

@@ -119,9 +119,7 @@ class KsActionGraph {
            ShelfManager *shelf_manager,
            std::vector<ActionWithTimeSeq> *remaining_plan,
            int &start_time_ms);
-  void SetPlan(const std::vector<ActionWithTimeSeq> &new_plan,
-               const std::set<Edge> &edges,
-               const std::set<Edge> &ref_edges);
+  void SetPlan(const std::vector<ActionWithTimeSeq> &new_plan, const std::set<Edge> &edges);
   // Returns the to acknowledge and to send part of the current plan.
   // The initial status of all robots corresponds to this plan is available in robot manager.
   ActionPlan GetCurrentPlan() const;

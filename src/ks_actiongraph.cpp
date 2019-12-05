@@ -25,20 +25,12 @@ void KsActionGraph::Cut(vector<RobotInfo> *robot_info,
                         ShelfManager *shelf_manager,
                         vector<ActionWithTimeSeq> *remaining_plan,
                         int &start_time_ms) {
-  cout << "performing cut" << endl;
   cut_started_ = true;
   start_time_ms = 0;
   for (int i = 0; i < robot_count_; i++) {
     if (to_send_action_index_[i] > 0) {
       start_time_ms = max(start_time_ms, plan_[i][to_send_action_index_[i] - 1].end_time_ms);
     }
-//    for (int j = to_send_action_index_[i]; j < ((int) plan_[i].size()); j++) {
-//      (*remaining_plan)[i].push_back(plan_[i][j]);
-//    }
-
-//    for (int j = to_send_action_index_[i]; j < ((int) plan_[i].size()); j++) {
-//      adj_.RemoveAllEdgesFrom({i, j});
-//    }
   }
   *remaining_plan = plan_;
 
@@ -50,10 +42,7 @@ void KsActionGraph::Cut(vector<RobotInfo> *robot_info,
   }
 }
 
-void KsActionGraph::SetPlan(const std::vector<ActionWithTimeSeq> &new_plan,
-                            const std::set<Edge> &edges,
-                            const std::set<Edge> &ref_edges) {
-  cout << "performing set" << endl;
+void KsActionGraph::SetPlan(const std::vector<ActionWithTimeSeq> &new_plan, const std::set<Edge> &edges) {
   for (int i = 0; i < robot_count_; i++) {
     if (!new_plan[i].empty()) {
       assert(plan_[i].empty());
@@ -72,15 +61,6 @@ void KsActionGraph::SetPlan(const std::vector<ActionWithTimeSeq> &new_plan,
     }
 //    cout << "newly added edges: " << e.to_string() << endl;
     adj_.AddEdge(e.from, e.to);
-  }
-
-  const auto & es = adj_.GetEdgeSet();
-  for (const auto& e : es) {
-//    cout << "checking edge: " << e.to_string() << endl;
-    if (ref_edges.find(e) == ref_edges.end()) {
-      cout << "checking edge failed: " << e.to_string() << endl;
-    }
-    assert(ref_edges.find(e) != ref_edges.end());
   }
   cut_started_ = false;
 }
@@ -140,31 +120,17 @@ std::set<Edge> GetNewDependency(const std::vector<ActionWithTimeSeq> &plan,
   set<int> plan_robot_set(GetRobotWithActions(plan));
   set<int> remaining_plan_robot_set(GetRobotWithActions(remaining_plan));
 
-  // TODO: assertions that can be removed.
-  for (int r : plan_robot_set) {
-    assert(remaining_plan_robot_set.find(r) == remaining_plan_robot_set.end());
-  }
-  for (int r : remaining_plan_robot_set) {
-    assert(plan_robot_set.find(r) == plan_robot_set.end());
-  }
-
   set<Edge> rtn;
-  // TODO: assertions that can be removed.
-  int expected_size = 0;
 
   const auto& d0 = GetDependencyWithinPlan(plan_robot_set, plan);
-  expected_size += (int)d0.size();
   rtn.insert(d0.begin(), d0.end());
 
   const auto& d1 = GetDependencyInterPlan(plan_robot_set, plan, remaining_plan_robot_set, remaining_plan);
-  expected_size += (int)d1.size();
   rtn.insert(d1.begin(), d1.end());
 
   const auto& d2 = GetDependencyInterPlan(remaining_plan_robot_set, remaining_plan, plan_robot_set, plan);
-  expected_size += (int)d2.size();
   rtn.insert(d2.begin(), d2.end());
 
-  assert(expected_size == (int) rtn.size());
   return rtn;
 }
 
@@ -180,7 +146,6 @@ std::set<Edge> GetDependencyWithinPlan(const std::set<int> &robots, const std::v
           ActionWithTime awt_0 = plan[robot_0][action_index_0];
           ActionWithTime awt_1 = plan[robot_1][action_index_1];
           if (awt_0.start_pos.loc == awt_1.end_pos.loc && awt_0.start_time_ms <= awt_1.start_time_ms) {
-            assert(awt_0.start_time_ms < awt_1.end_time_ms);
             // Assert insertion success.
             assert(rtn.insert(Edge({robot_0, action_index_0}, {robot_1, action_index_1})).second);
             break;
@@ -207,7 +172,6 @@ std::set<Edge> GetDependencyInterPlan(const std::set<int> &robots_0,
           ActionWithTime awt_0 = plan_0[robot_0][action_index_0];
           ActionWithTime awt_1 = plan_1[robot_1][action_index_1];
           if (awt_0.start_pos.loc == awt_1.end_pos.loc && awt_0.start_time_ms <= awt_1.start_time_ms) {
-            assert(awt_0.start_time_ms < awt_1.end_time_ms);
             // Assert insertion success.
             assert(rtn.insert(Edge({robot_0, action_index_0}, {robot_1, action_index_1})).second);
             break;

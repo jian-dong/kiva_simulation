@@ -161,16 +161,16 @@ void KsScheduler::Run() {
     set<Edge> new_edges = GetNewDependency(resp.plan, remaining_plan);
 
     // For validation only.
-    for (int i = 0; i < robot_count_; i++) {
-      if (!resp.plan[i].empty()) {
-        remaining_plan[i] = resp.plan[i];
-      }
-    }
+//    for (int i = 0; i < robot_count_; i++) {
+//      if (!resp.plan[i].empty()) {
+//        remaining_plan[i] = resp.plan[i];
+//      }
+//    }
 //    ValidatePlan(tmp_robot_info, remaining_plan);
-    set<Edge> edge_set = BuildDependencyOld(remaining_plan);
+//    set<Edge> edge_set = BuildDependencyOld(remaining_plan);
 
     mutex_.lock();
-    action_graph_.SetPlan(resp.plan, new_edges, edge_set);
+    action_graph_.SetPlan(resp.plan, new_edges);
     mutex_.unlock();
   }
 }
