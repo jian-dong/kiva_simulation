@@ -209,9 +209,7 @@ struct PfRequest {
   // Includes all robots.
   std::vector<RobotInfo> robots;
   std::vector<ActionWithTimeSeq> prev_plan;
-
-  PfRequest(std::vector<RobotInfo> robots, std::vector<ActionWithTimeSeq> prev_plan)
-      : robots(robots), prev_plan(prev_plan) {};
+  int start_time_ms;
 };
 
 struct PfResponse {
@@ -226,9 +224,10 @@ class SippSolver {
   PfResponse FindPath(const PfRequest &req, ShelfManager *shelf_manager_p);
 
  private:
-  void PlanInternalMission(const RobotInfo &robot, ActionWithTimeSeq *rtn);
-  void PlanWmsMission(const RobotInfo &robot, ActionWithTimeSeq *rtn);
+  void PlanInternalMission(const int start_time_ms, const RobotInfo &robot, ActionWithTimeSeq *rtn);
+  void PlanWmsMission(const int start_time_ms, const RobotInfo &robot, ActionWithTimeSeq *rtn);
   void UpdateSafeIntervalsWithActions(int start_time_ms,
+                                      int cur_time_ms,
                                       Position pos,
                                       const ActionWithTimeSeq &seq,
                                       int robot_id);

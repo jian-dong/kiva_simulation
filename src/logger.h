@@ -11,7 +11,7 @@ inline void LogNormal(const std::string &s) {
 
 inline void LogFatal(const std::string &s) {
   LogNormal(s);
-  exit(0);
+  assert(false);
 }
 }
 #endif

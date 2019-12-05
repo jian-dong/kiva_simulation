@@ -43,7 +43,6 @@ std::optional<MissionReport> KsRobotManager::UpdateRobotStatus(int robot_id, Act
 bool KsRobotManager::AssignMissions(std::list<WmsMission> *missions, const ActionPlan &cur_plan) {
   bool rtn = false;
   set<Location> used_locations;
-  cout << "Assign mission current plan size: " << Get2DMatrixSize(cur_plan) << endl;
   for (int i = 0; i < robot_count_; i++) {
     for (ActionWithTime a : cur_plan[i]) {
       assert(robot_info_[i].has_mission);

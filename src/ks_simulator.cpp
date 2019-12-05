@@ -13,9 +13,9 @@ using namespace std;
 using std::chrono::milliseconds;
 
 namespace {
-int GetActionDurationMs(Action a) {
+int GetActionDurationMs(Action a, int robot_id) {
   if (a == Action::CCTURN || a == Action::CTURN) {
-    int rtn = kTurnDurationMs + GenRandomNumber(-500, 600);
+    int rtn = kTurnDurationMs;
     assert(rtn > 0);
     return rtn;
   }
@@ -23,7 +23,7 @@ int GetActionDurationMs(Action a) {
     return kAttachDetachDurationMs;
   }
   if (a == Action::MOVE) {
-    int rtn = kMoveDurationMs + (int) pow(GenRandomNumber(0, 40), 2);
+    int rtn = kMoveDurationMs * (double)(1 + ((double)(robot_id % 20 - 10)) / ((double) 100));
     assert(rtn > 0);
     return rtn;
   }
@@ -77,7 +77,8 @@ void KsSimulator::Run() {
         }
         ActionProgress progress(action);
         progress.start_time = prev_action_finish_time == kEpoch ? GetCurrentTime() : prev_action_finish_time;
-        progress.end_time = progress.start_time + milliseconds(GetActionDurationMs(action));
+        progress.end_time = progress.start_time
+            + milliseconds(GetActionDurationMs(action, command.robot_id));
         robot_status_[command.robot_id].pending_actions.push(progress);
       }
       mq_from_scheduler_.pop();
@@ -155,7 +156,9 @@ void KsSimulator::RedisSet(const string &key, const string &value) {
 void KsSimulator::SanityCheck() {
   for (int i = 0; i < robot_count_; i++) {
     for (int j = i + 1; j < robot_count_; j++) {
-      if (GetDist(robot_status_sanity_check_[i].loc, robot_status_sanity_check_[j].loc) < 0.8) {
+      if (GetDist(robot_status_sanity_check_[i].loc, robot_status_sanity_check_[j].loc) < 0.5) {
+        cout << "robot " << i << " at location: " << robot_status_sanity_check_[i].loc.to_string() << endl;
+        cout << "robot " << j << " at location: " << robot_status_sanity_check_[j].loc.to_string() << endl;
         LogFatal("Collision.");
       }
     }

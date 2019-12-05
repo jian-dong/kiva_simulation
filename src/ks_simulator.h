@@ -33,6 +33,10 @@ struct LocationDouble {
   Location GetLocation() {
     return {(int)round(x), (int)round(y)};
   }
+
+  std::string to_string() const {
+    return std::to_string(x) + " " + std::to_string(y);
+  }
 };
 
 inline double GetDist(const LocationDouble &a, const LocationDouble &b) {

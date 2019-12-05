@@ -120,7 +120,9 @@ struct ActionWithTime {
   [[nodiscard]] std::string to_string() const {
     return kActionToString.at(action)
         + " start: " + std::to_string(start_time_ms)
-        + " end: " + std::to_string(end_time_ms);
+        + " end: " + std::to_string(end_time_ms)
+        + " start pos: " + start_pos.to_string()
+        + " end pos: " + end_pos.to_string();
   }
 };
 
