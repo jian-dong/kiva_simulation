@@ -129,15 +129,6 @@ struct ActionWithTime {
 using ActionWithTimeSeq = std::vector<ActionWithTime>;
 using ActionPlan = std::vector<ActionWithTimeSeq>;
 
-Position GetPostionAtTime(const ActionWithTimeSeq& plan, int time_ms) {
-  assert(!plan.empty());
-  assert(plan[0].start_time_ms <= time_ms);
-
-  Position init = plan[0].start_pos;
-
-  return {};
-}
-
 class ShelfManager {
  public:
   ShelfManager() = default;
@@ -217,6 +208,21 @@ inline void ApplyActionOnPosition(Action a, Position *p) {
     default:exit(0);
   }
 }
+
+inline Position GetPostionAtTime(const ActionWithTimeSeq& plan, int time_ms) {
+  assert(!plan.empty());
+
+  Position pos = plan[0].start_pos;
+  for (const auto & awt : plan) {
+    if (awt.start_time_ms < time_ms) {
+      ApplyActionOnPosition(awt.action, &pos);
+    } else {
+      break;
+    }
+  }
+  return pos;
+}
+
 
 // Debug helpers.
 inline void PrintRobotInfo(const std::vector<RobotInfo> &robot_info) {

@@ -170,9 +170,13 @@ void SippSolver::UpdateSafeIntervalsWithActions(const RobotInfo &init_status,
     safe_intervals_.at(init_status.pos.loc).RemoveInterval(new_plan_cut_time_ms, robot_id);
     return;
   }
-  Position pos = remaining_plan[0].start_pos;
-  int start_time_ms = remaining_plan[0].start_time_ms;
+
+  Position pos = GetPostionAtTime(remaining_plan, new_plan_cut_time_ms);
+  int start_time_ms = new_plan_cut_time_ms;
   for (ActionWithTime awt : remaining_plan) {
+    if (awt.start_time_ms < new_plan_cut_time_ms) {
+      continue;
+    }
     if (awt.action != Action::MOVE) {
       ApplyActionOnPosition(awt.action, &pos);
       assert(pos == awt.end_pos);

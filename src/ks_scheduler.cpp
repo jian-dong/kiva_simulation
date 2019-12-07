@@ -67,9 +67,15 @@ void ValidatePlan(const vector<RobotInfo> &init_status,
       loc_to_intervals[init_status[robot_id].pos.loc].AddInterval(new_plan_start_time, robot_id);
       continue;
     }
-    int start_time_ms = plan[robot_id][0].start_time_ms;
-    Position pos = plan[robot_id][0].start_pos;
+
+    Position pos = GetPostionAtTime(plan[robot_id], new_plan_start_time);
+    int start_time_ms = new_plan_start_time;
+
     for (ActionWithTime awt : plan[robot_id]) {
+      if (awt.start_time_ms < new_plan_start_time) {
+        continue;
+      }
+
       if (awt.action != Action::MOVE) {
         ApplyActionOnPosition(awt.action, &pos);
         assert(pos == awt.end_pos);
