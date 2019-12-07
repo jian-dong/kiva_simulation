@@ -98,8 +98,8 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
     } else {
       PlanWmsMission(req.start_time_ms, robot, &rtn.plan[robot_id]);
     }
-    cout << "Planning for robot " << robot_id
-        << " plan size: " << (int)rtn.plan[robot_id].size() << " time: " << GetSecondsSinceEpoch() << endl;
+//    cout << "Planning for robot " << robot_id
+//        << " plan size: " << (int)rtn.plan[robot_id].size() << " time: " << GetSecondsSinceEpoch() << endl;
   }
 
   return rtn;

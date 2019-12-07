@@ -67,10 +67,10 @@ bool KsRobotManager::AssignMissions(std::list<WmsMission> *missions, const Actio
       picked_robot->has_mission = true;
       picked_robot->mission.is_internal = false;
       picked_robot->mission.wms_mission = to_assign;
-      cout << "Assign mission " << to_assign.id
-           << " from: " << to_assign.pick_from.loc.to_string()
-           << " to " << to_assign.drop_to.loc.to_string()
-           << " to robot " << picked_robot->id << endl;
+//      cout << "Assign mission " << to_assign.id
+//           << " from: " << to_assign.pick_from.loc.to_string()
+//           << " to " << to_assign.drop_to.loc.to_string()
+//           << " to robot " << picked_robot->id << endl;
       mission_it = missions->erase(mission_it);
     } else {
       break;

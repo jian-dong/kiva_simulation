@@ -12,16 +12,7 @@ namespace ks {
 using namespace std;
 
 namespace {
-// Debug functions.
-void PrintPlanSize(const std::vector<ActionWithTimeSeq> &plan) {
-  int robot_count = plan.size();
-  cout << "Plan size: ";
-  for (int i = 0; i < robot_count; i++) {
-    cout << plan[i].size() << " ";
-  }
-  cout << endl;
-}
-
+// Debug/validation functions.
 void PrintMissionInfo(const vector<RobotInfo> &robot_info) {
   for (const auto &r : robot_info) {
     cout << "robot id: " << r.id << " ";
@@ -35,25 +26,6 @@ void PrintMissionInfo(const vector<RobotInfo> &robot_info) {
       cout << "has no mission.";
     }
     cout << endl;
-  }
-}
-
-// Reset remaining plan start time, make it 0.
-void UpdateRemainingPlan(vector<vector<ActionWithTime>> &plan) {
-  int min_start_time = kIntInf;
-  int robot_count = plan.size();
-  for (int i = 0; i < robot_count; i++) {
-    if (plan[i].empty()) {
-      continue;
-    }
-    min_start_time = min(min_start_time, plan[i].front().start_time_ms);
-  }
-
-  for (int i = 0; i < robot_count; i++) {
-    for (ActionWithTime &awt : plan[i]) {
-      awt.start_time_ms -= min_start_time;
-      awt.end_time_ms -= min_start_time;
-    }
   }
 }
 
@@ -90,22 +62,6 @@ void ValidatePlan(const vector<RobotInfo> &init_status,
   }
 }
 
-int GetMinStartTime(const vector<vector<ActionWithTime>> &plan) {
-  int min_start_time = kIntInf;
-  int robot_count = plan.size();
-  for (int i = 0; i < robot_count; i++) {
-    if (plan[i].empty()) {
-      continue;
-    }
-    min_start_time = min(min_start_time, plan[i].front().start_time_ms);
-  }
-
-  if (min_start_time == kIntInf) {
-    // No plan in the set.
-    min_start_time = 0;
-  }
-  return min_start_time;
-}
 }
 
 void KsScheduler::AddMission(WmsMission mission) {
@@ -156,7 +112,7 @@ void KsScheduler::Run() {
     // TODO: develop a mode that can do/use global replanning.
     robot_manager_.AssignMissions(&missions_from_wms_, action_graph_.GetCurrentPlan());
 
-    // TODO: rewrite this section, since robot_info is not really used.
+    // TODO: rewrite this section.
     // Make a copy of current state.
     vector<RobotInfo> tmp_robot_info = robot_manager_.GetRobotInfo();
     ShelfManager tmp_shelf_manager(shelf_manager_);
@@ -168,7 +124,6 @@ void KsScheduler::Run() {
     mutex_.unlock();
 
     // Do not lock during SippSolver::FindPath and KsActionGraph::BuildTwoWayAdjList(which can be time consuming).
-//    int start_time_ms = GetMinStartTime(remaining_plan);
     PfResponse resp = sipp_p_->FindPath(
         {tmp_robot_info, remaining_plan, start_time_ms},
         &tmp_shelf_manager);
@@ -177,12 +132,12 @@ void KsScheduler::Run() {
 
     // TODO: validate the dependency graph in a separate thread.
     // For validation only.
-    for (int i = 0; i < robot_count_; i++) {
-      if (!resp.plan[i].empty()) {
-        remaining_plan[i] = resp.plan[i];
-      }
-    }
-    ValidatePlan(tmp_robot_info, remaining_plan, start_time_ms);
+//    for (int i = 0; i < robot_count_; i++) {
+//      if (!resp.plan[i].empty()) {
+//        remaining_plan[i] = resp.plan[i];
+//      }
+//    }
+//    ValidatePlan(tmp_robot_info, remaining_plan, start_time_ms);
 //    set<Edge> edge_set = BuildDependencyOld(remaining_plan);
 
     mutex_.lock();

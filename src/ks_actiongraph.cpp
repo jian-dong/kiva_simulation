@@ -41,11 +41,11 @@ void KsActionGraph::Cut(vector<RobotInfo> *robot_info,
     }
   }
 
-  cout << "performing cut " << GetSecondsSinceEpoch() << " returns start_time_ms: " << start_time_ms << endl;
+//  cout << "performing cut " << GetSecondsSinceEpoch() << " returns start_time_ms: " << start_time_ms << endl;
 }
 
 void KsActionGraph::SetPlan(const std::vector<ActionWithTimeSeq> &new_plan, const std::set<Edge> &edges) {
-  cout << "performing set " << GetSecondsSinceEpoch() << endl;
+//  cout << "performing set " << GetSecondsSinceEpoch() << endl;
   for (int i = 0; i < robot_count_; i++) {
     if (!new_plan[i].empty()) {
       assert(plan_[i].empty());
@@ -53,26 +53,20 @@ void KsActionGraph::SetPlan(const std::vector<ActionWithTimeSeq> &new_plan, cons
     }
   }
 
-  // TODO: between cut and set, a task may be finished, need to handle this, the current handling
-  // may have bugs.
   for (const auto &e : edges) {
-//    assert(e.from.action_index < (int) plan_[e.from.robot_id].size());
     assert(e.to.action_index < (int) plan_[e.to.robot_id].size());
     if (e.from.action_index <= replied_action_index_[e.from.robot_id]) {
       // From plan advanced.
-//      cout << "not added edge 1: " << e.to_string() << endl;
       continue;
     }
     if (e.from.action_index >= (int) plan_[e.from.robot_id].size()) {
       // From plan finished.
-//      cout << "not added edge 2: " << e.to_string() << endl;
       continue;
     }
     if (e.to.action_index <= replied_action_index_[e.to.robot_id]) {
       LogFatal("This should not happen.");
     }
 //    cout << "newly added edges: " << e.to_string() << endl;
-    // TODO: also check e.to, the robot/task associated with e.to may be finished.
     adj_.AddEdge(e.from, e.to);
   }
   cut_started_ = false;
@@ -203,6 +197,8 @@ std::set<Edge> GetDependencyInterPlan(const std::set<int> &robots_0,
           if (awt_0.start_pos.loc == awt_1.end_pos.loc && awt_0.start_time_ms <= awt_1.start_time_ms) {
             // Assert insertion success.
             assert(rtn.insert(Edge({robot_0, action_index_0}, {robot_1, action_index_1})).second);
+            // Note, add a break here may result in problems if an action in the new plan has edges
+            // to actions in an existing plan.
 //            break;
           }
         }
