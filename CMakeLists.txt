@@ -14,7 +14,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 #set(BUILD_SHARED_LIBS OFF)
 
 # Side note: use "VERBOSE=1 make" to show the actual make command.
-set(CMAKE_CXX_FLAGS "-O2")
+#set(CMAKE_CXX_FLAGS "-O2")
 # When using -O2, some bug not exposed with -O0 may be exposed, so the code need
 # to be more robust.
 # -Wall : enable all warnings.

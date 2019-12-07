@@ -226,11 +226,14 @@ class SippSolver {
  private:
   void PlanInternalMission(const int start_time_ms, const RobotInfo &robot, ActionWithTimeSeq *rtn);
   void PlanWmsMission(const int start_time_ms, const RobotInfo &robot, ActionWithTimeSeq *rtn);
-  void UpdateSafeIntervalsWithActions(int start_time_ms,
-                                      int cur_time_ms,
-                                      Position pos,
-                                      const ActionWithTimeSeq &seq,
-                                      int robot_id);
+  void UpdateSafeIntervalsWithActions(const RobotInfo &init_status,
+                                      const ActionWithTimeSeq &remaining_plan,
+                                      int robot_id,
+                                      int new_plan_cut_time_ms);
+  void UpdateSafeIntervalsWithActionsForNewPlan(int start_time_ms,
+                                                Position pos,
+                                                const ActionWithTimeSeq &seq,
+                                                int robot_id);
 
   const KsMap &map_;
   std::map<Location, IntervalSeq> safe_intervals_;

@@ -51,6 +51,10 @@ inline bool ElapsedTimeLongerThanMs(TimePoint s, uint64_t duration_ms) {
   return GetCurrentTime() - s > std::chrono::milliseconds(duration_ms);
 }
 
+inline int GetSecondsSinceEpoch() {
+  return std::chrono::system_clock::now().time_since_epoch().count() / 1000000000;
+}
+
 class Random {
   // TODO:
   // Currently the program is using rand() from cstdlib.

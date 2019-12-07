@@ -40,9 +40,12 @@ void KsActionGraph::Cut(vector<RobotInfo> *robot_info,
       ApplyActionOnRobot(a, &((*robot_info)[robot_id]), shelf_manager);
     }
   }
+
+  cout << "performing cut " << GetSecondsSinceEpoch() << " returns start_time_ms: " << start_time_ms << endl;
 }
 
 void KsActionGraph::SetPlan(const std::vector<ActionWithTimeSeq> &new_plan, const std::set<Edge> &edges) {
+  cout << "performing set " << GetSecondsSinceEpoch() << endl;
   for (int i = 0; i < robot_count_; i++) {
     if (!new_plan[i].empty()) {
       assert(plan_[i].empty());
@@ -52,14 +55,21 @@ void KsActionGraph::SetPlan(const std::vector<ActionWithTimeSeq> &new_plan, cons
 
   // TODO: between cut and set, a task may be finished, need to handle this, the current handling
   // may have bugs.
-  for (const auto& e : edges) {
+  for (const auto &e : edges) {
 //    assert(e.from.action_index < (int) plan_[e.from.robot_id].size());
-    assert(e.to.action_index < (int)plan_[e.to.robot_id].size());
+    assert(e.to.action_index < (int) plan_[e.to.robot_id].size());
     if (e.from.action_index <= replied_action_index_[e.from.robot_id]) {
+      // From plan advanced.
+//      cout << "not added edge 1: " << e.to_string() << endl;
       continue;
     }
     if (e.from.action_index >= (int) plan_[e.from.robot_id].size()) {
+      // From plan finished.
+//      cout << "not added edge 2: " << e.to_string() << endl;
       continue;
+    }
+    if (e.to.action_index <= replied_action_index_[e.to.robot_id]) {
+      LogFatal("This should not happen.");
     }
 //    cout << "newly added edges: " << e.to_string() << endl;
     // TODO: also check e.to, the robot/task associated with e.to may be finished.
@@ -79,6 +89,10 @@ void KsActionGraph::UpdateRobotStatus(int robot_id, Action a) {
     plan_[robot_id].clear();
     replied_action_index_[robot_id] = -1;
     to_send_action_index_[robot_id] = 0;
+
+    for (int action_index = 0; action_index < (int) plan_[robot_id].size(); action_index++) {
+      adj_.AssertNoEdgeTo({robot_id, action_index});
+    }
   }
 }
 
@@ -118,20 +132,26 @@ ActionPlan KsActionGraph::GetCurrentPlan() const {
   return rtn;
 }
 
-std::set<Edge> GetNewDependency(const std::vector<ActionWithTimeSeq> &plan,
-                                const std::vector<ActionWithTimeSeq> &remaining_plan) {
+std::set<Edge> GetNewDependency(const vector<ActionWithTimeSeq> &plan,
+                                const vector<ActionWithTimeSeq> &remaining_plan,
+                                const vector<int> &replied_action_index_remaining) {
+  int robot_count = plan.size();
   set<int> plan_robot_set(GetRobotWithActions(plan));
   set<int> remaining_plan_robot_set(GetRobotWithActions(remaining_plan));
-
+  vector<int> replied_action_index_new(robot_count, -1);
   set<Edge> rtn;
 
-  const auto& d0 = GetDependencyWithinPlan(plan_robot_set, plan);
+  const auto &d0 = GetDependencyWithinPlan(plan_robot_set, plan);
   rtn.insert(d0.begin(), d0.end());
 
-  const auto& d1 = GetDependencyInterPlan(plan_robot_set, plan, remaining_plan_robot_set, remaining_plan);
+  const auto &d1 = GetDependencyInterPlan(
+      plan_robot_set, plan, replied_action_index_new,
+      remaining_plan_robot_set, remaining_plan, replied_action_index_remaining);
   rtn.insert(d1.begin(), d1.end());
 
-  const auto& d2 = GetDependencyInterPlan(remaining_plan_robot_set, remaining_plan, plan_robot_set, plan);
+  const auto &d2 = GetDependencyInterPlan(
+      remaining_plan_robot_set, remaining_plan, replied_action_index_remaining,
+      plan_robot_set, plan, replied_action_index_new);
   rtn.insert(d2.begin(), d2.end());
 
   return rtn;
@@ -162,22 +182,28 @@ std::set<Edge> GetDependencyWithinPlan(const std::set<int> &robots, const std::v
 
 std::set<Edge> GetDependencyInterPlan(const std::set<int> &robots_0,
                                       const std::vector<ActionWithTimeSeq> &plan_0,
+                                      const vector<int> &replied_action_index_0,
                                       const std::set<int> &robots_1,
-                                      const std::vector<ActionWithTimeSeq> &plan_1) {
+                                      const std::vector<ActionWithTimeSeq> &plan_1,
+                                      const vector<int> &replied_action_index_1) {
   set<Edge> rtn;
   for (int robot_0 : robots_0) {
-    for (int action_index_0 = 0; action_index_0 < (int) plan_0[robot_0].size(); action_index_0++) {
+    for (int action_index_0 = replied_action_index_0[robot_0] + 1;
+         action_index_0 < (int) plan_0[robot_0].size();
+         action_index_0++) {
       for (int robot_1 : robots_1) {
         if (robot_0 == robot_1) {
           continue;
         }
-        for (int action_index_1 = 0; action_index_1 < (int) plan_1[robot_1].size(); action_index_1++) {
+        for (int action_index_1 = replied_action_index_1[robot_1] + 1;
+             action_index_1 < (int) plan_1[robot_1].size();
+             action_index_1++) {
           ActionWithTime awt_0 = plan_0[robot_0][action_index_0];
           ActionWithTime awt_1 = plan_1[robot_1][action_index_1];
           if (awt_0.start_pos.loc == awt_1.end_pos.loc && awt_0.start_time_ms <= awt_1.start_time_ms) {
             // Assert insertion success.
             assert(rtn.insert(Edge({robot_0, action_index_0}, {robot_1, action_index_1})).second);
-            break;
+//            break;
           }
         }
       }
@@ -193,12 +219,12 @@ std::set<Edge> BuildDependencyOld(const std::vector<ActionWithTimeSeq> &plan) {
   // TODO: are there any better data structures can be applied here? bloom filter?
   // Add type II edges, type I edges(between actions of the same robot) are implicit.
   for (int robot_0 = 0; robot_0 < robot_count; robot_0++) {
-    for (int action_index_0 = 0; action_index_0 < (int)plan[robot_0].size(); action_index_0++) {
+    for (int action_index_0 = 0; action_index_0 < (int) plan[robot_0].size(); action_index_0++) {
       for (int robot_1 = 0; robot_1 < robot_count; robot_1++) {
         if (robot_0 == robot_1) {
           continue;
         }
-        for (int action_index_1 = 0; action_index_1 < (int)plan[robot_1].size(); action_index_1++) {
+        for (int action_index_1 = 0; action_index_1 < (int) plan[robot_1].size(); action_index_1++) {
           ActionWithTime awt_0 = plan[robot_0][action_index_0];
           ActionWithTime awt_1 = plan[robot_1][action_index_1];
           if (awt_0.start_pos.loc == awt_1.end_pos.loc && awt_0.start_time_ms <= awt_1.start_time_ms) {
@@ -212,6 +238,5 @@ std::set<Edge> BuildDependencyOld(const std::vector<ActionWithTimeSeq> &plan) {
   }
   return rtn;
 }
-
 
 }

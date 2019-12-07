@@ -84,6 +84,10 @@ class TwoWayAdjList {
     adj_[from].clear();
   }
 
+  void AssertNoEdgeTo(const Node &to) {
+    assert(radj_[to].empty());
+  }
+
   // An action can be sent out if it has no incoming edge or the only incoming edge is from
   // a precedent action of the same robot.
   bool CanSendAction(const Node &to) {
@@ -125,7 +129,9 @@ class KsActionGraph {
   ActionPlan GetCurrentPlan() const;
   void UpdateRobotStatus(int robot_id, Action a);
   std::vector<std::vector<Action>> GetCommands(const std::vector<RobotInfo> &robot_info, int &acked);
-
+  const std::vector<int>& GetRepliedActionIndex() const {
+    return replied_action_index_;
+  }
  private:
   const int robot_count_;
 
@@ -135,19 +141,24 @@ class KsActionGraph {
   std::vector<int> replied_action_index_;
 
   std::vector<std::vector<ActionWithTime>> plan_;
+  // If plan_ for a robot is not empty,
+  std::vector<int> mission_id_;
   TwoWayAdjList adj_;
   bool cut_started_;
 };
 
 // Helper functions.
 std::set<Edge> GetNewDependency(const std::vector<ActionWithTimeSeq> &plan,
-                                const std::vector<ActionWithTimeSeq> &remaining_plan);
+                                const std::vector<ActionWithTimeSeq> &remaining_plan,
+                                const std::vector<int> &replied_action_index);
 std::set<Edge> GetDependencyWithinPlan(const std::set<int> &robots,
                                        const std::vector<ActionWithTimeSeq> &plan);
 std::set<Edge> GetDependencyInterPlan(const std::set<int> &robots_0,
                                       const std::vector<ActionWithTimeSeq> &plan_0,
+                                      const std::vector<int> &to_send_action_index_0,
                                       const std::set<int> &robots_1,
-                                      const std::vector<ActionWithTimeSeq> &plan_1);
+                                      const std::vector<ActionWithTimeSeq> &plan_1,
+                                      const std::vector<int> &to_send_action_index_1);
 std::set<Edge> BuildDependencyOld(const std::vector<ActionWithTimeSeq> &plan);
 }
 

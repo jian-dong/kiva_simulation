@@ -129,6 +129,15 @@ struct ActionWithTime {
 using ActionWithTimeSeq = std::vector<ActionWithTime>;
 using ActionPlan = std::vector<ActionWithTimeSeq>;
 
+Position GetPostionAtTime(const ActionWithTimeSeq& plan, int time_ms) {
+  assert(!plan.empty());
+  assert(plan[0].start_time_ms <= time_ms);
+
+  Position init = plan[0].start_pos;
+
+  return {};
+}
+
 class ShelfManager {
  public:
   ShelfManager() = default;

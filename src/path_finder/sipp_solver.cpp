@@ -36,8 +36,7 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
   for (int i = 0; i < robot_count_; i++) {
     // If prev_plan is empty, then the whole interval will be removed.
     // If prev_plan is not empty, remove intervals according to the plan.
-    Position init_pos = req.prev_plan[i].empty() ? req.robots[i].pos : req.prev_plan[i][0].start_pos;
-    UpdateSafeIntervalsWithActions(0, req.start_time_ms, init_pos, req.prev_plan[i], i);
+    UpdateSafeIntervalsWithActions(req.robots[i], req.prev_plan[i], i, req.start_time_ms);
 
     // For robots with a mission but without a plan.
     if (req.prev_plan[i].empty() && req.robots[i].has_mission) {
@@ -99,9 +98,8 @@ PfResponse SippSolver::FindPath(const PfRequest &req, ShelfManager *shelf_manage
     } else {
       PlanWmsMission(req.start_time_ms, robot, &rtn.plan[robot_id]);
     }
-//    cout << "Planning for robot which has a mission but not a plan: " << robot_id
-//        << " plan size: " << (int)rtn.plan[robot_id].size() << " action seq: " << endl;
-//    PrintActionSequence(rtn.plan[robot_id]);
+    cout << "Planning for robot " << robot_id
+        << " plan size: " << (int)rtn.plan[robot_id].size() << " time: " << GetSecondsSinceEpoch() << endl;
   }
 
   return rtn;
@@ -112,7 +110,7 @@ void SippSolver::PlanInternalMission(const int start_time_ms, const RobotInfo &r
   const auto &new_actions = astar.GetActions(0, false, robot.pos,
                                              robot.mission.internal_mission.to);
   AppendToVector(new_actions, rtn);
-  UpdateSafeIntervalsWithActions(start_time_ms, start_time_ms, robot.pos, *rtn, robot.id);
+  UpdateSafeIntervalsWithActionsForNewPlan(start_time_ms, robot.pos, *rtn, robot.id);
 }
 
 void SippSolver::PlanWmsMission(const int start_time_ms, const RobotInfo &robot, ActionWithTimeSeq *rtn) {
@@ -161,14 +159,39 @@ void SippSolver::PlanWmsMission(const int start_time_ms, const RobotInfo &robot,
     shelf_manager_p_->AddMapping(robot.mission.wms_mission.shelf_id,
                                  robot.mission.wms_mission.drop_to.loc);
   }
-  UpdateSafeIntervalsWithActions(start_time_ms, start_time_ms, robot.pos, *rtn, robot.id);
+  UpdateSafeIntervalsWithActionsForNewPlan(start_time_ms, robot.pos, *rtn, robot.id);
 }
 
-void SippSolver::UpdateSafeIntervalsWithActions(int start_time_ms,
-                                                int cur_time_ms,
-                                                Position pos,
-                                                const ActionWithTimeSeq &seq,
-                                                int robot_id) {
+void SippSolver::UpdateSafeIntervalsWithActions(const RobotInfo &init_status,
+                                                const ActionWithTimeSeq &remaining_plan,
+                                                int robot_id,
+                                                int new_plan_cut_time_ms) {
+  if (remaining_plan.empty()) {
+    safe_intervals_.at(init_status.pos.loc).RemoveInterval(new_plan_cut_time_ms, robot_id);
+    return;
+  }
+  Position pos = remaining_plan[0].start_pos;
+  int start_time_ms = remaining_plan[0].start_time_ms;
+  for (ActionWithTime awt : remaining_plan) {
+    if (awt.action != Action::MOVE) {
+      ApplyActionOnPosition(awt.action, &pos);
+      assert(pos == awt.end_pos);
+      continue;
+    }
+
+    int prev_interval_end_ms = awt.start_time_ms + kBufferDurationMs;
+    safe_intervals_.at(pos.loc).RemoveInterval(start_time_ms, prev_interval_end_ms, robot_id);
+    ApplyActionOnPosition(awt.action, &pos);
+    start_time_ms = awt.end_time_ms;
+  }
+
+  safe_intervals_.at(pos.loc).RemoveInterval(start_time_ms, robot_id);
+}
+
+void SippSolver::UpdateSafeIntervalsWithActionsForNewPlan(int start_time_ms,
+                                                          Position pos,
+                                                          const ActionWithTimeSeq &seq,
+                                                          int robot_id) {
   for (ActionWithTime awt : seq) {
     if (awt.action != Action::MOVE) {
       ApplyActionOnPosition(awt.action, &pos);
@@ -177,9 +200,7 @@ void SippSolver::UpdateSafeIntervalsWithActions(int start_time_ms,
     }
 
     int prev_interval_end_ms = awt.start_time_ms + kBufferDurationMs;
-    if (cur_time_ms <= start_time_ms) {
-      safe_intervals_.at(pos.loc).RemoveInterval(start_time_ms, prev_interval_end_ms, robot_id);
-    }
+    safe_intervals_.at(pos.loc).RemoveInterval(start_time_ms, prev_interval_end_ms, robot_id);
     ApplyActionOnPosition(awt.action, &pos);
     start_time_ms = awt.end_time_ms;
   }
