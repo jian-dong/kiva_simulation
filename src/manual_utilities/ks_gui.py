@@ -25,6 +25,8 @@ ROBOT_INFO_ITEMS = 4
 SHELF_INFO_ITEMS = 2
 REDIS_KEY = "ks"
 
+BODY = [(-4, 4), (-4, -4), (4, 0)]
+
 ################################################################################
 # Helper functions.
 
@@ -41,17 +43,13 @@ def transfer_coordinates(x, y):
 ################################################################################
 
 class Robot(object):
-    canvas = None
-    display_item = None
-    x = 0
-    y = 0
-    theta = 0
-    has_shelf = False
-
-    body = [(-4, 4), (-4, -4), (4, 0)]
-
     def __init__(self, canvas):
         self.canvas = canvas
+        self.display_item = None
+        self.x = 0
+        self.y = 0
+        self.theta = 0
+        self.has_shelf = False
 
     def draw(self, x, y, theta, has_shelf):
         if self.display_item is None:
@@ -77,7 +75,7 @@ class Robot(object):
         # theta in radians, need to take negation since y is flipped in the tkinter world
         cangle = cmath.exp(- self.theta * 1j)
         new_xy = []
-        for a, b in self.body:
+        for a, b in BODY:
             v = cangle * (complex(a, b)) + offset
             new_xy.append(v.real)
             new_xy.append(v.imag)
