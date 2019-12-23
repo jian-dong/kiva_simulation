@@ -29,6 +29,24 @@ struct Node {
   }
 };
 
+struct Edge {
+  Node from, to;
+  Edge(Node from, Node to) : from(from), to(to) {};
+
+  bool operator<(const Edge &o) const {
+    if ((!(from < o.from)) && (!(o.from < from))) {
+      return to < o.to;
+    } else {
+      return from < o.from;
+    }
+  }
+
+  std::string to_string() const{
+    return std::to_string(from.robot_id) + " " + std::to_string(from.action_index)
+        + " : " + std::to_string(to.robot_id) + " " + std::to_string(to.action_index);
+  }
+};
+
 class TwoWayAdjList {
  public:
   TwoWayAdjList() = default;
@@ -43,20 +61,37 @@ class TwoWayAdjList {
     radj_[to].insert(from);
   }
 
+  std::set<Edge> GetEdgeSet() {
+    std::set<Edge> rtn;
+    for (const auto & elem : adj_) {
+      for (const auto & to: elem.second) {
+        rtn.insert({elem.first, to});
+      }
+    }
+    return rtn;
+  }
+
+  void AssertContainsEdge(const Node &from, const Node &to) {
+    assert(adj_[from].find(to) != adj_[from].end());
+    assert(radj_[to].find(from) != radj_[to].end());
+  }
+
   void RemoveAllEdgesFrom(const Node &from) {
     for (const Node &to : adj_[from]) {
+//      std::cout << "newly removed edges: " << Edge(from, to).to_string() << std::endl;
       assert(radj_[to].erase(from) == 1);
     }
     adj_[from].clear();
   }
 
+  void AssertNoEdgeTo(const Node &to) {
+    assert(radj_[to].empty());
+  }
+
   // An action can be sent out if it has no incoming edge or the only incoming edge is from
   // a precedent action of the same robot.
   bool CanSendAction(const Node &to) {
-    if (radj_[to].size() == 0) {
-      return true;
-    }
-    return false;
+    return radj_[to].empty();
   }
 
   void Clear() {
@@ -70,112 +105,61 @@ class TwoWayAdjList {
   std::map<Node, std::set<Node>> radj_;
 };
 
-class GlobalPlan {
+class KsActionGraph {
  public:
-  GlobalPlan(int robot_count) : robot_count_(robot_count) {
+  KsActionGraph(int robot_count) : robot_count_(robot_count) {
     plan_.resize(robot_count);
     to_send_action_index_.resize(robot_count);
     replied_action_index_.resize(robot_count);
-    Clear();
-  }
-
-  GlobalPlan(const GlobalPlan &o) = default;
-
-  void Clear() {
-    plan_set_ = false;
-    plan_.clear();
     for (int i = 0; i < robot_count_; i++) {
       to_send_action_index_[i] = 0;
       replied_action_index_[i] = -1;
     }
     adj_.Clear();
-    target_robot_info_.clear();
-  }
-
-  [[nodiscard]] bool Finished(const std::vector<RobotInfo> &robot_info) const {
-    assert(plan_set_);
-    for (int i = 0; i < robot_count_; i++) {
-      if (replied_action_index_[i] < (((int) plan_[i].size()) - 1)) {
-        return false;
-      }
-    }
-    // TODO: remove the assertion here and enable separate planning, once the cut function is feature complete.
-    if (target_robot_info_ != robot_info) {
-      std::cout << "target robot info: " << std::endl;
-      PrintRobotInfo(target_robot_info_);
-      std::cout << "actual robot info: " << std::endl;
-      PrintRobotInfo(robot_info);
-      std::cout << std::endl;
-      std::cout << "Failed the finished robot info check" << std::endl;
-    }
-
-    for (int i = 0; i < robot_count_; i++) {
-      assert(to_send_action_index_[i] == ((int) plan_[i].size()));
-    }
-
-    assert(target_robot_info_ == robot_info);
-    return true;
-  }
-
-  void UpdateRobotStatus(int robot_id, Action a);
-  std::vector<Action> GetActionToSend(int robot_id);
-  // This function is idempotent, the current behavior is stop sending new commands, just wait
-  // for all the already sent command to finish.
-  void Cut(std::vector<RobotInfo> *robot_info,
-           ShelfManager *shelf_manager,
-           std::vector<ActionWithTimeSeq> *remaining_plan);
-  // This function may be called on the next plan multiple times.
-  void SetPlan(std::vector<RobotInfo> init_robot_info,
-               const std::vector<ActionWithTimeSeq> &plan,
-               TwoWayAdjList *adj_p);
-  ActionPlan GetCurrentPlan() const;
-  const int robot_count_;
-  // Initialized to 0, when this value is equal to the action count, all the actions are sent.
-  std::vector<int> to_send_action_index_;
-  // Initialized to -1, when this is equal to <last_action_index_>, this plan is considered done.
-  std::vector<int> replied_action_index_;
-
-  // Robot status if all the actions in this plan are executed.
-  std::vector<RobotInfo> target_robot_info_;
-  bool plan_set_;
-
-  std::vector<std::vector<ActionWithTime>> plan_;
-  TwoWayAdjList adj_;
-};
-
-class KsActionGraph {
- public:
-  KsActionGraph(int robot_count) : robot_count_(robot_count) {
-    cur_plan_p_ = new GlobalPlan(robot_count);
-    next_plan_p_ = new GlobalPlan(robot_count);
-    cur_plan_p_->Clear();
-    next_plan_p_->Clear();
-    in_transition_ = false;
+    cut_started_ = false;
   };
 
   void Cut(std::vector<RobotInfo> *robot_info,
            ShelfManager *shelf_manager,
-           std::vector<ActionWithTimeSeq> *remaining_plan);
-  void SetPlan(const std::vector<RobotInfo> &prev_robot_info,
-               const std::vector<ActionWithTimeSeq> &plan,
-               TwoWayAdjList *adj_p);
+           std::vector<ActionWithTimeSeq> *remaining_plan,
+           int &start_time_ms);
+  void SetPlan(const std::vector<ActionWithTimeSeq> &new_plan, const std::set<Edge> &edges);
   // Returns the to acknowledge and to send part of the current plan.
   // The initial status of all robots corresponds to this plan is available in robot manager.
   ActionPlan GetCurrentPlan() const;
   void UpdateRobotStatus(int robot_id, Action a);
   std::vector<std::vector<Action>> GetCommands(const std::vector<RobotInfo> &robot_info, int &acked);
-  bool ShouldPlan() { return !next_plan_p_->plan_set_;};
-
-  static TwoWayAdjList BuildTwoWayAdjList(const std::vector<ActionWithTimeSeq> &plan);
-
-
+  const std::vector<int>& GetRepliedActionIndex() const {
+    return replied_action_index_;
+  }
  private:
   const int robot_count_;
-  GlobalPlan *cur_plan_p_;
-  GlobalPlan *next_plan_p_;
-  // Cut started, set not yet finished.
-  bool in_transition_;
+
+  // Initialized to 0, when this value is equal to the action count, all the actions are sent.
+  std::vector<int> to_send_action_index_;
+  // Initialized to -1, when this is equal to <last_action_index_>, this plan is considered done.
+  std::vector<int> replied_action_index_;
+
+  std::vector<std::vector<ActionWithTime>> plan_;
+  // If plan_ for a robot is not empty,
+  std::vector<int> mission_id_;
+  TwoWayAdjList adj_;
+  bool cut_started_;
 };
+
+// Helper functions.
+std::set<Edge> GetNewDependency(const std::vector<ActionWithTimeSeq> &plan,
+                                const std::vector<ActionWithTimeSeq> &remaining_plan,
+                                const std::vector<int> &replied_action_index);
+std::set<Edge> GetDependencyWithinPlan(const std::set<int> &robots,
+                                       const std::vector<ActionWithTimeSeq> &plan);
+std::set<Edge> GetDependencyInterPlan(const std::set<int> &robots_0,
+                                      const std::vector<ActionWithTimeSeq> &plan_0,
+                                      const std::vector<int> &to_send_action_index_0,
+                                      const std::set<int> &robots_1,
+                                      const std::vector<ActionWithTimeSeq> &plan_1,
+                                      const std::vector<int> &to_send_action_index_1);
+std::set<Edge> BuildDependencyOld(const std::vector<ActionWithTimeSeq> &plan);
 }
 
 #endif

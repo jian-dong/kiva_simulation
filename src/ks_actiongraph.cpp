@@ -8,97 +8,163 @@ namespace ks {
 
 using namespace std;
 
-void KsActionGraph::Cut(vector<RobotInfo> *robot_info,
-                        ShelfManager *shelf_manager,
-                        vector<ActionWithTimeSeq> *remaining_plan) {
-  assert(!in_transition_);
-  in_transition_ = true;
-  cout << "cut happened" << endl;
-  cur_plan_p_->Cut(robot_info, shelf_manager, remaining_plan);
-}
-
-void KsActionGraph::SetPlan(const std::vector<RobotInfo> &prev_robot_info,
-                            const std::vector<ActionWithTimeSeq> &plan,
-                            TwoWayAdjList *adj_p) {
-  if (cur_plan_p_->plan_set_) {
-    if (cur_plan_p_->target_robot_info_ != prev_robot_info) {
-      std::cout << "target robot info: " << std::endl;
-      PrintRobotInfo(cur_plan_p_->target_robot_info_);
-      std::cout << "actual robot info: " << std::endl;
-      PrintRobotInfo(prev_robot_info);
-      std::cout << std::endl;
-
-      LogFatal("Invalid plan.");
-      return;
+namespace {
+set<int> GetRobotWithActions(const std::vector<ActionWithTimeSeq> &plan) {
+  set<int> rtn;
+  int robot_count = plan.size();
+  for (int i = 0; i < robot_count; i++) {
+    if (!plan[i].empty()) {
+      rtn.insert(i);
     }
   }
-  cout << "set plan happened" << endl;
-  next_plan_p_->SetPlan(prev_robot_info, plan, adj_p);
-  assert(in_transition_);
-  in_transition_ = false;
+  return rtn;
+}
+}
+
+void KsActionGraph::Cut(vector<RobotInfo> *robot_info,
+                        ShelfManager *shelf_manager,
+                        vector<ActionWithTimeSeq> *remaining_plan,
+                        int &start_time_ms) {
+  cut_started_ = true;
+  start_time_ms = 0;
+  for (int i = 0; i < robot_count_; i++) {
+    if (to_send_action_index_[i] > 0) {
+      start_time_ms = max(start_time_ms, plan_[i][to_send_action_index_[i] - 1].end_time_ms);
+    }
+  }
+  *remaining_plan = plan_;
+
+  for (int robot_id = 0; robot_id < robot_count_; robot_id++) {
+    for (int j = replied_action_index_[robot_id] + 1; j < (int) to_send_action_index_[robot_id]; j++) {
+      Action a = plan_[robot_id][j].action;
+      ApplyActionOnRobot(a, &((*robot_info)[robot_id]), shelf_manager);
+    }
+  }
+
+//  cout << "performing cut " << GetSecondsSinceEpoch() << " returns start_time_ms: " << start_time_ms << endl;
+}
+
+void KsActionGraph::SetPlan(const std::vector<ActionWithTimeSeq> &new_plan, const std::set<Edge> &edges) {
+//  cout << "performing set " << GetSecondsSinceEpoch() << endl;
+  for (int i = 0; i < robot_count_; i++) {
+    if (!new_plan[i].empty()) {
+      assert(plan_[i].empty());
+      plan_[i] = new_plan[i];
+    }
+  }
+
+  for (const auto &e : edges) {
+    assert(e.to.action_index < (int) plan_[e.to.robot_id].size());
+    if (e.from.action_index <= replied_action_index_[e.from.robot_id]) {
+      // From plan advanced.
+      continue;
+    }
+    if (e.from.action_index >= (int) plan_[e.from.robot_id].size()) {
+      // From plan finished.
+      continue;
+    }
+    if (e.to.action_index <= replied_action_index_[e.to.robot_id]) {
+      LogFatal("This should not happen.");
+    }
+//    cout << "newly added edges: " << e.to_string() << endl;
+    adj_.AddEdge(e.from, e.to);
+  }
+  cut_started_ = false;
 }
 
 void KsActionGraph::UpdateRobotStatus(int robot_id, Action a) {
-  cur_plan_p_->UpdateRobotStatus(robot_id, a);
+  assert(plan_[robot_id][replied_action_index_[robot_id] + 1].action == a);
+  replied_action_index_[robot_id]++;
+  assert(replied_action_index_[robot_id] < to_send_action_index_[robot_id]);
+  adj_.RemoveAllEdgesFrom({robot_id, replied_action_index_[robot_id]});
+
+  if (replied_action_index_[robot_id] == (((int) plan_[robot_id].size()) - 1)) {
+    // Mission finished.
+    plan_[robot_id].clear();
+    replied_action_index_[robot_id] = -1;
+    to_send_action_index_[robot_id] = 0;
+
+    for (int action_index = 0; action_index < (int) plan_[robot_id].size(); action_index++) {
+      adj_.AssertNoEdgeTo({robot_id, action_index});
+    }
+  }
 }
 
 vector<vector<Action>> KsActionGraph::GetCommands(const std::vector<RobotInfo> &robot_info, int &acked) {
   vector<vector<Action>> rtn(robot_count_);
-  if (!cur_plan_p_->plan_set_) {
-    if (next_plan_p_->plan_set_) {
-      cout << "swap plan happened - should not happen often" << endl;
-//      swap(cur_plan_p_, next_plan_p_);
-      GlobalPlan *tmp_p = cur_plan_p_;
-      cur_plan_p_ = next_plan_p_;
-      next_plan_p_ = tmp_p;
-      acked = 0;
-    } else {
-      return rtn;
-    }
-  } else {
-    if (cur_plan_p_->Finished(robot_info) && (!in_transition_)) {
-      if (next_plan_p_->plan_set_) {
-        cur_plan_p_->plan_set_ = false;
-        cout << "swap plan happened" << endl;
-//        swap(cur_plan_p_, next_plan_p_);
-        GlobalPlan *tmp_p = cur_plan_p_;
-        cur_plan_p_ = next_plan_p_;
-        next_plan_p_ = tmp_p;
-        cout << "total acked in current plan: " << acked << endl;
-        acked = 0;
-      } else {
-        return rtn;
-      }
-    }
+
+  if (cut_started_) {
+    return rtn;
   }
 
-  for (int i = 0; i < robot_count_; i++) {
-    rtn[i] = cur_plan_p_->GetActionToSend(i);
+  for (int robot_id = 0; robot_id < robot_count_; robot_id++) {
+    int action_index;
+    for (action_index = to_send_action_index_[robot_id]; action_index < (int) plan_[robot_id].size(); action_index++) {
+      if (action_index - replied_action_index_[robot_id] > kCommandsToSent) {
+        break;
+      }
+      Node to_send(robot_id, action_index);
+      if (adj_.CanSendAction(to_send)) {
+        rtn[robot_id].push_back(plan_[robot_id][action_index].action);
+      } else {
+        break;
+      }
+    }
+    to_send_action_index_[robot_id] = action_index;
   }
   return rtn;
 }
 
 ActionPlan KsActionGraph::GetCurrentPlan() const {
-  return cur_plan_p_->GetCurrentPlan();
+  ActionPlan rtn(robot_count_);
+
+  for (int i = 0; i < robot_count_; i++) {
+    for (int j = replied_action_index_[i] + 1; j < ((int) plan_[i].size()); j++) {
+      rtn[i].push_back(plan_[i][j]);
+    }
+  }
+  return rtn;
 }
 
-TwoWayAdjList KsActionGraph::BuildTwoWayAdjList(const std::vector<ActionWithTimeSeq> &plan) {
+std::set<Edge> GetNewDependency(const vector<ActionWithTimeSeq> &plan,
+                                const vector<ActionWithTimeSeq> &remaining_plan,
+                                const vector<int> &replied_action_index_remaining) {
   int robot_count = plan.size();
-  TwoWayAdjList rtn;
-  // TODO: are there any better data structures can be applied here? bloom filter?
-  // Add type II edges, type I edges(between actions of the same robot) are implicit.
-  for (int robot_0 = 0; robot_0 < robot_count; robot_0++) {
-    for (int action_index_0 = 0; action_index_0 < (int)plan[robot_0].size(); action_index_0++) {
-      for (int robot_1 = 0; robot_1 < robot_count; robot_1++) {
+  set<int> plan_robot_set(GetRobotWithActions(plan));
+  set<int> remaining_plan_robot_set(GetRobotWithActions(remaining_plan));
+  vector<int> replied_action_index_new(robot_count, -1);
+  set<Edge> rtn;
+
+  const auto &d0 = GetDependencyWithinPlan(plan_robot_set, plan);
+  rtn.insert(d0.begin(), d0.end());
+
+  const auto &d1 = GetDependencyInterPlan(
+      plan_robot_set, plan, replied_action_index_new,
+      remaining_plan_robot_set, remaining_plan, replied_action_index_remaining);
+  rtn.insert(d1.begin(), d1.end());
+
+  const auto &d2 = GetDependencyInterPlan(
+      remaining_plan_robot_set, remaining_plan, replied_action_index_remaining,
+      plan_robot_set, plan, replied_action_index_new);
+  rtn.insert(d2.begin(), d2.end());
+
+  return rtn;
+}
+
+std::set<Edge> GetDependencyWithinPlan(const std::set<int> &robots, const std::vector<ActionWithTimeSeq> &plan) {
+  set<Edge> rtn;
+  for (int robot_0 : robots) {
+    for (int action_index_0 = 0; action_index_0 < (int) plan[robot_0].size(); action_index_0++) {
+      for (int robot_1 : robots) {
         if (robot_0 == robot_1) {
           continue;
         }
-        for (int action_index_1 = 0; action_index_1 < (int)plan[robot_1].size(); action_index_1++) {
+        for (int action_index_1 = 0; action_index_1 < (int) plan[robot_1].size(); action_index_1++) {
           ActionWithTime awt_0 = plan[robot_0][action_index_0];
           ActionWithTime awt_1 = plan[robot_1][action_index_1];
           if (awt_0.start_pos.loc == awt_1.end_pos.loc && awt_0.start_time_ms <= awt_1.start_time_ms) {
-            assert(awt_0.start_time_ms < awt_1.end_time_ms);
-            rtn.AddEdge({robot_0, action_index_0}, {robot_1, action_index_1});
+            // Assert insertion success.
+            assert(rtn.insert(Edge({robot_0, action_index_0}, {robot_1, action_index_1})).second);
             break;
           }
         }
@@ -108,85 +174,64 @@ TwoWayAdjList KsActionGraph::BuildTwoWayAdjList(const std::vector<ActionWithTime
   return rtn;
 }
 
-void GlobalPlan::Cut(vector<RobotInfo> *robot_info,
-                     ShelfManager *shelf_manager,
-                     vector<ActionWithTimeSeq> *remaining_plan) {
-  for (int i = 0; i < robot_count_; i++) {
-    for (int j = to_send_action_index_[i]; j < ((int)plan_[i].size()); j++) {
-      (*remaining_plan)[i].push_back(plan_[i][j]);
-    }
-    plan_[i].resize(to_send_action_index_[i]);
-  }
-
-  for (int robot_id = 0; robot_id < robot_count_; robot_id++) {
-    for (int j = replied_action_index_[robot_id] + 1; j < (int)to_send_action_index_[robot_id]; j++) {
-      assert(((int)plan_[robot_id].size()) == ((int)to_send_action_index_[robot_id]));
-      Action a = plan_[robot_id][j].action;
-      ApplyActionOnRobot(a, &((*robot_info)[robot_id]), shelf_manager);
-    }
-  }
-
-  target_robot_info_ = *robot_info;
-}
-
-void GlobalPlan::SetPlan(vector<RobotInfo> init_robot_info,
-                         const vector<ActionWithTimeSeq> &plan,
-                         TwoWayAdjList *adj_p) {
-  assert(!plan_set_);
-  Clear();
-  plan_ = plan;
-  cout << "newly set plan size: " << Get2DMatrixSize(plan_) << endl;
-  adj_ = std::move(*adj_p);
-
-  for (int i = 0; i < robot_count_; i++) {
-    for (ActionWithTime awt : plan_[i]) {
-      ApplyActionOnRobot(awt.action, &init_robot_info[i], nullptr);
+std::set<Edge> GetDependencyInterPlan(const std::set<int> &robots_0,
+                                      const std::vector<ActionWithTimeSeq> &plan_0,
+                                      const vector<int> &replied_action_index_0,
+                                      const std::set<int> &robots_1,
+                                      const std::vector<ActionWithTimeSeq> &plan_1,
+                                      const vector<int> &replied_action_index_1) {
+  set<Edge> rtn;
+  for (int robot_0 : robots_0) {
+    for (int action_index_0 = replied_action_index_0[robot_0] + 1;
+         action_index_0 < (int) plan_0[robot_0].size();
+         action_index_0++) {
+      for (int robot_1 : robots_1) {
+        if (robot_0 == robot_1) {
+          continue;
+        }
+        for (int action_index_1 = replied_action_index_1[robot_1] + 1;
+             action_index_1 < (int) plan_1[robot_1].size();
+             action_index_1++) {
+          ActionWithTime awt_0 = plan_0[robot_0][action_index_0];
+          ActionWithTime awt_1 = plan_1[robot_1][action_index_1];
+          if (awt_0.start_pos.loc == awt_1.end_pos.loc && awt_0.start_time_ms <= awt_1.start_time_ms) {
+            // Assert insertion success.
+            assert(rtn.insert(Edge({robot_0, action_index_0}, {robot_1, action_index_1})).second);
+            // Note, add a break here may result in problems if an action in the new plan has edges
+            // to actions in an existing plan.
+//            break;
+          }
+        }
+      }
     }
   }
-  target_robot_info_ = init_robot_info;
-  plan_set_ = true;
-}
 
-vector<Action> GlobalPlan::GetActionToSend(int robot_id) {
-  vector<Action> rtn;
-  int action_index;
-  for (action_index = to_send_action_index_[robot_id]; action_index < (int) plan_[robot_id].size(); action_index++) {
-    if (action_index - replied_action_index_[robot_id] > kCommandsToSent) {
-      break;
-    }
-    Node to_send(robot_id, action_index);
-    if (adj_.CanSendAction(to_send)) {
-      rtn.push_back(plan_[robot_id][action_index].action);
-    } else {
-      break;
-    }
-  }
-  to_send_action_index_[robot_id] = action_index;
   return rtn;
 }
 
-void GlobalPlan::UpdateRobotStatus(int robot_id, Action a) {
-  assert(plan_[robot_id][replied_action_index_[robot_id] + 1].action == a);
-  replied_action_index_[robot_id]++;
-  assert(replied_action_index_[robot_id] < to_send_action_index_[robot_id]);
-  adj_.RemoveAllEdgesFrom({robot_id, replied_action_index_[robot_id]});
-}
-
-ActionPlan GlobalPlan::GetCurrentPlan() const {
-  ActionPlan rtn(robot_count_);
-
-  // TODO: consider whether unreplied actions or to send action should be used.
-  for (int i = 0; i < robot_count_; i++) {
-    for (int j = replied_action_index_[i] + 1; j < ((int)plan_[i].size()); j++) {
-      rtn[i].push_back(plan_[i][j]);
+std::set<Edge> BuildDependencyOld(const std::vector<ActionWithTimeSeq> &plan) {
+  int robot_count = plan.size();
+  std::set<Edge> rtn;
+  // TODO: are there any better data structures can be applied here? bloom filter?
+  // Add type II edges, type I edges(between actions of the same robot) are implicit.
+  for (int robot_0 = 0; robot_0 < robot_count; robot_0++) {
+    for (int action_index_0 = 0; action_index_0 < (int) plan[robot_0].size(); action_index_0++) {
+      for (int robot_1 = 0; robot_1 < robot_count; robot_1++) {
+        if (robot_0 == robot_1) {
+          continue;
+        }
+        for (int action_index_1 = 0; action_index_1 < (int) plan[robot_1].size(); action_index_1++) {
+          ActionWithTime awt_0 = plan[robot_0][action_index_0];
+          ActionWithTime awt_1 = plan[robot_1][action_index_1];
+          if (awt_0.start_pos.loc == awt_1.end_pos.loc && awt_0.start_time_ms <= awt_1.start_time_ms) {
+            assert(awt_0.start_time_ms < awt_1.end_time_ms);
+            assert(rtn.insert(Edge({robot_0, action_index_0}, {robot_1, action_index_1})).second);
+            break;
+          }
+        }
+      }
     }
   }
-
-//  for (int i = 0; i < robot_count_; i++) {
-//    for (int j = to_send_action_index_[i]; j < ((int)plan_[i].size()); j++) {
-//      rtn[i].push_back(plan_[i][j]);
-//    }
-//  }
   return rtn;
 }
 

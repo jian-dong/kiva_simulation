@@ -43,7 +43,6 @@ std::optional<MissionReport> KsRobotManager::UpdateRobotStatus(int robot_id, Act
 bool KsRobotManager::AssignMissions(std::list<WmsMission> *missions, const ActionPlan &cur_plan) {
   bool rtn = false;
   set<Location> used_locations;
-  cout << "Assign mission current plan size: " << Get2DMatrixSize(cur_plan) << endl;
   for (int i = 0; i < robot_count_; i++) {
     for (ActionWithTime a : cur_plan[i]) {
       assert(robot_info_[i].has_mission);
@@ -68,16 +67,17 @@ bool KsRobotManager::AssignMissions(std::list<WmsMission> *missions, const Actio
       picked_robot->has_mission = true;
       picked_robot->mission.is_internal = false;
       picked_robot->mission.wms_mission = to_assign;
-      cout << "Assign mission " << to_assign.id
-           << " from: " << to_assign.pick_from.loc.to_string()
-           << " to " << to_assign.drop_to.loc.to_string()
-           << " to robot: " << picked_robot->id << endl;
+//      cout << "Assign mission " << to_assign.id
+//           << " from: " << to_assign.pick_from.loc.to_string()
+//           << " to " << to_assign.drop_to.loc.to_string()
+//           << " to robot " << picked_robot->id << endl;
       mission_it = missions->erase(mission_it);
     } else {
       break;
     }
   }
 
+  // TODO: test internal tasks in a smaller map, then enable this.
 //  vector<RobotInfo *> idle_robots = GetIdleRobots();
 //  set<Location> free_locations = GetFreeLocations(*missions);
 //  for (RobotInfo* r : idle_robots) {

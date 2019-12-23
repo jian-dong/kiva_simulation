@@ -12,70 +12,56 @@ namespace ks {
 using namespace std;
 
 namespace {
-// Debug functions.
-//void PrintPlanSize(const std::vector<ActionWithTimeSeq> &plan) {
-//  int robot_count = plan.size();
-//  cout << "Plan size: ";
-//  for (int i = 0; i < robot_count; i++) {
-//    cout << plan[i].size() << " ";
-//  }
-//  cout << endl;
-//}
-//
-//void PrintMissionInfo(const vector<RobotInfo> &robot_info) {
-//  for (const auto &r : robot_info) {
-//    cout << "robot id: " << r.id << " ";
-//    if (r.has_mission) {
-//      if (r.mission.is_internal) {
-//        cout << "internal mission";
-//      } else {
-//        cout << r.mission.wms_mission.to_string();
-//      }
-//    } else {
-//      cout << "has no mission.";
-//    }
-//    cout << endl;
-//  }
-//}
-
-// Reset remaining plan start time, make it 0.
-void UpdateRemainingPlan(vector<vector<ActionWithTime>> &plan) {
-  int min_start_time = kIntInf;
-  int robot_count = plan.size();
-  for (int i = 0; i < robot_count; i++) {
-    if (plan[i].empty()) {
-      continue;
+// Debug/validation functions.
+void PrintMissionInfo(const vector<RobotInfo> &robot_info) {
+  for (const auto &r : robot_info) {
+    cout << "robot id: " << r.id << " ";
+    if (r.has_mission) {
+      if (r.mission.is_internal) {
+        cout << "internal mission";
+      } else {
+        cout << r.mission.wms_mission.to_string();
+      }
+    } else {
+      cout << "has no mission.";
     }
-    min_start_time = min(min_start_time, plan[i].front().start_time_ms);
-  }
-
-  for (int i = 0; i < robot_count; i++) {
-    for (ActionWithTime &awt : plan[i]) {
-      awt.start_time_ms -= min_start_time;
-      awt.end_time_ms -= min_start_time;
-    }
+    cout << endl;
   }
 }
 
 void ValidatePlan(const vector<RobotInfo> &init_status,
-                  const vector<vector<ActionWithTime>> &plan) {
+                  const vector<vector<ActionWithTime>> &plan,
+                  int new_plan_start_time) {
   map<Location, IntervalSet> loc_to_intervals;
   int robot_count = init_status.size();
   for (int robot_id = 0; robot_id < robot_count; robot_id++) {
-    int start_time = 0;
-    Position pos = init_status[robot_id].pos;
+    if (plan[robot_id].empty()) {
+      loc_to_intervals[init_status[robot_id].pos.loc].AddInterval(new_plan_start_time, robot_id);
+      continue;
+    }
+
+    Position pos = GetPostionAtTime(plan[robot_id], new_plan_start_time);
+    int start_time_ms = new_plan_start_time;
+
     for (ActionWithTime awt : plan[robot_id]) {
-      if (awt.action != Action::MOVE) {
-        ApplyActionOnPosition(awt.action, &pos);
+      if (awt.start_time_ms < new_plan_start_time) {
         continue;
       }
-      loc_to_intervals[pos.loc].AddInterval(start_time, awt.start_time_ms + kBufferDurationMs, robot_id);
+
+      if (awt.action != Action::MOVE) {
+        ApplyActionOnPosition(awt.action, &pos);
+        assert(pos == awt.end_pos);
+        continue;
+      }
+      loc_to_intervals[pos.loc].AddInterval(
+          start_time_ms, awt.start_time_ms + kBufferDurationMs, robot_id);
       ApplyActionOnPosition(awt.action, &pos);
-      start_time = awt.end_time_ms;
+      start_time_ms = awt.end_time_ms;
     }
-    loc_to_intervals[pos.loc].AddInterval(start_time, robot_id);
+    loc_to_intervals[pos.loc].AddInterval(start_time_ms, robot_id);
   }
 }
+
 }
 
 void KsScheduler::AddMission(WmsMission mission) {
@@ -123,41 +109,39 @@ void KsScheduler::Run() {
     mutex_io_up_.unlock();
 
     mutex_.lock();
-
-    // Assign missions.
-//    bool has_new_assignment = robot_manager_.AssignMissions(
-//        &missions_from_wms_,
-//        action_graph_.GetCurrentPlan());
-//    if (!has_new_assignment) {
-//      mutex_.unlock();
-//      continue;
-//    }
-    if (!action_graph_.ShouldPlan()) {
-      mutex_.unlock();
-      continue;
-    }
+    // TODO: develop a mode that can do/use global replanning.
     robot_manager_.AssignMissions(&missions_from_wms_, action_graph_.GetCurrentPlan());
+
+    // TODO: rewrite this section.
     // Make a copy of current state.
     vector<RobotInfo> tmp_robot_info = robot_manager_.GetRobotInfo();
     ShelfManager tmp_shelf_manager(shelf_manager_);
-    vector<vector<ActionWithTime>> remaining_plan;
-    remaining_plan.resize(robot_count_);
-    action_graph_.Cut(&tmp_robot_info, &tmp_shelf_manager, &remaining_plan);
-
-//    robot_manager_.AssignMissions(&missions_from_wms_, remaining_plan);
-//    cout << "remaining plan size: " << Get2DMatrixSize(remaining_plan) << endl;
-
+    vector<vector<ActionWithTime>> remaining_plan(robot_count_);
+    vector<int> replied_action_index(robot_count_);
+    int start_time_ms;
+    action_graph_.Cut(&tmp_robot_info, &tmp_shelf_manager, &remaining_plan, start_time_ms);
+    replied_action_index = action_graph_.GetRepliedActionIndex();
     mutex_.unlock();
 
-    // Do not lock during FindPath()(which can be time consuming).
-    UpdateRemainingPlan(remaining_plan);
-    PfResponse resp = sipp_p_->FindPath({tmp_robot_info, remaining_plan}, &tmp_shelf_manager);
+    // Do not lock during SippSolver::FindPath and KsActionGraph::BuildTwoWayAdjList(which can be time consuming).
+    PfResponse resp = sipp_p_->FindPath(
+        {tmp_robot_info, remaining_plan, start_time_ms},
+        &tmp_shelf_manager);
 
-    ValidatePlan(tmp_robot_info, resp.plan);
-    TwoWayAdjList adj = KsActionGraph::BuildTwoWayAdjList(resp.plan);
+    set<Edge> new_edges = GetNewDependency(resp.plan, remaining_plan, replied_action_index);
+
+    // TODO: validate the dependency graph in a separate thread.
+    // For validation only.
+//    for (int i = 0; i < robot_count_; i++) {
+//      if (!resp.plan[i].empty()) {
+//        remaining_plan[i] = resp.plan[i];
+//      }
+//    }
+//    ValidatePlan(tmp_robot_info, remaining_plan, start_time_ms);
+//    set<Edge> edge_set = BuildDependencyOld(remaining_plan);
 
     mutex_.lock();
-    action_graph_.SetPlan(tmp_robot_info, resp.plan, &adj);
+    action_graph_.SetPlan(resp.plan, new_edges);
     mutex_.unlock();
   }
 }
@@ -180,18 +164,18 @@ void KsScheduler::AdgRunner() {
       action_graph_.UpdateRobotStatus(report.robot_id, report.action);
       auto rtn = robot_manager_.UpdateRobotStatus(report.robot_id, report.action, &shelf_manager_);
       if (rtn) {
-        const MissionReport& r = rtn.value();
+        const MissionReport &r = rtn.value();
         if (r.type == MissionReportType::PICKUP_DONE) {
-          cout << "mission: " << r.mission.id << " pickup done. by robot: " << report.robot_id << endl;
+          cout << "mission: " << r.mission.id << " pickup done. by robot " << report.robot_id << endl;
         } else {
-          cout << "mission: " << r.mission.id << " drop down done. by robot: " << report.robot_id << endl;
+          cout << "mission: " << r.mission.id << " drop down done. by robot " << report.robot_id << endl;
         }
         wms_p_->ReportMissionStatus(r);
       }
     }
 
     // TODO: remove the use of robot info once the cut is fully implemented.
-    const vector<vector<Action>>& commands = action_graph_.GetCommands(
+    const vector<vector<Action>> &commands = action_graph_.GetCommands(
         robot_manager_.GetRobotInfo(), acked_action_count_);
     mutex_.unlock();
 

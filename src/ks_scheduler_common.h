@@ -120,7 +120,9 @@ struct ActionWithTime {
   [[nodiscard]] std::string to_string() const {
     return kActionToString.at(action)
         + " start: " + std::to_string(start_time_ms)
-        + " end: " + std::to_string(end_time_ms);
+        + " end: " + std::to_string(end_time_ms)
+        + " start pos: " + start_pos.to_string()
+        + " end pos: " + end_pos.to_string();
   }
 };
 
@@ -206,6 +208,21 @@ inline void ApplyActionOnPosition(Action a, Position *p) {
     default:exit(0);
   }
 }
+
+inline Position GetPostionAtTime(const ActionWithTimeSeq& plan, int time_ms) {
+  assert(!plan.empty());
+
+  Position pos = plan[0].start_pos;
+  for (const auto & awt : plan) {
+    if (awt.start_time_ms < time_ms) {
+      ApplyActionOnPosition(awt.action, &pos);
+    } else {
+      break;
+    }
+  }
+  return pos;
+}
+
 
 // Debug helpers.
 inline void PrintRobotInfo(const std::vector<RobotInfo> &robot_info) {

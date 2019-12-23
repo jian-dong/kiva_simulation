@@ -19,8 +19,8 @@ set(CMAKE_CXX_FLAGS "-O2")
 # to be more robust.
 # -Wall : enable all warnings.
 # -Werror: treat warning as error.
-# TODO: These flags effectively disabled -O2, why?
-#set(CMAKE_CXX_FLAGS "-Wall -Werror")
+# Note, the two flags above effectively disables -O2.
+set(CMAKE_CXX_FLAGS "-Wall -Wno-unused-function")
 #set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} "-static")
 
 set(EXECUTABLE_OUTPUT_PATH

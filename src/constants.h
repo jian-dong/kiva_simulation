@@ -13,15 +13,15 @@ namespace ks {
 const char * const kMapFilePath = "../data/map_1.map";
 
 // WMS related.
-const int kPendingMoveToOperationMissionLimit = 400; // 400
+const int kPendingMoveToOperationMissionLimit = 320; // 400
 const int kMissionGenerationIntervalMs = 3000;
 const int kMinOperationTimeS = 20;
 const int kMoveOutProb = 20;
 
 // Scheduler related.
-const int kScheduleIntervalMs = 6000;
+const int kScheduleIntervalMs = 10000;
 const int kUpdateIntervalMs = 300;
-const int kCommandsToSent = 20;
+const int kCommandsToSent = 25;
 
 // Map related.
 const char kShelfOperationPoint = 'P';
