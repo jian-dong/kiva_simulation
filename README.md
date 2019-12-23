@@ -8,6 +8,9 @@
 * "Lifelong Multi-Agent Path Finding for Online Pickup and Delivery Tasks",
 * "Persistent and Robust Execution of MAPF Schedules in Warehouses".
 
+此程序的运行效果可参考视频：
+* v.youku.com/v_show/id_XNDQ2MTgzNzczMg==.html
+
 ## To Run
 
 1. Compile. In the base directory of this project, do "mkdir build && cd build && cmake .. && make".
@@ -18,9 +21,9 @@ With Ubuntu, to start redis, run "redis-server", then do "echo 'del ks' | redis-
 
 ## Implementation Notes
 
-1. In this project communication between modules is written
+1. In this project, communication between modules is written
 as function call(receiver maintains a message queue with lock),
-as compare to using RPC systems like Stubby. The advantage of this
+as compared to use RPC systems like Stubby. The advantage of this
 approach is lighter weight, the disadvantage is having this non-standard
 setup needs more reasoning.
 
