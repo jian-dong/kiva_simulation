@@ -2,7 +2,7 @@
 
 ## Introduction
 
-此程序实现了以下文章：
+此程序基于以下文章：
 * "SIPP: Safe Interval Path Planning for Dynamic Environments",
 * "Complete decentralized method for on-line multi-robot trajectory planning in well-formed infrastructures",
 * "Lifelong Multi-Agent Path Finding for Online Pickup and Delivery Tasks",
